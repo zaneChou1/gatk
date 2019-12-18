@@ -4,16 +4,12 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.util.FileExtensions;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.tribble.Feature;
 import htsjdk.variant.variantcontext.writer.Options;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.VCFHeaderLine;
-import java.io.File;
-import java.nio.file.Path;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.stream.Stream;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.ArgumentCollection;
 import org.broadinstitute.barclay.argparser.CommandLinePluginDescriptor;
@@ -42,6 +38,14 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
 import org.broadinstitute.hellbender.utils.reference.ReferenceUtils;
 import org.broadinstitute.hellbender.utils.variant.GATKVariantContextUtils;
+import org.broadinstitute.hellbender.utils.variant.writers.ShardingVCFWriter;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.ZonedDateTime;
+import java.util.*;
+import java.util.stream.Stream;
 
 //TODO:
 //UserException overloads
@@ -95,6 +99,10 @@ public abstract class GATKTool extends CommandLineProgram {
             shortName=StandardArgumentDefinitions.CREATE_OUTPUT_VARIANT_MD5_SHORT_NAME,
             doc = "If true, create a a MD5 digest any VCF file created.", optional=true, common = true)
     public boolean createOutputVariantMD5 = false;
+
+    @Argument(fullName = "max-variants-per-shard", optional = true, minValue = 0, common = true,
+            doc = "If non-zero, partitions VCF output into shards containing no greater than the given number of records.")
+    private int maxVariantsPerShard = 0;
 
     @Argument(fullName= StandardArgumentDefinitions.LENIENT_LONG_NAME,
             shortName = StandardArgumentDefinitions.LENIENT_SHORT_NAME,
@@ -892,11 +900,37 @@ public abstract class GATKTool extends CommandLineProgram {
             options.add(Options.DO_NOT_WRITE_GENOTYPES);
         }
 
-        return GATKVariantContextUtils.createVCFWriter(
-                outPath,
+        if (maxVariantsPerShard == 0) {
+            return GATKVariantContextUtils.createVCFWriter(
+                    outPath,
+                    sequenceDictionary,
+                    createOutputVariantMD5,
+                    options.toArray(new Options[options.size()]));
+        }
+        return new ShardingVCFWriter(
+                removeVcfExtension(outPath),
+                maxVariantsPerShard,
                 sequenceDictionary,
                 createOutputVariantMD5,
                 options.toArray(new Options[options.size()]));
+    }
+
+    /**
+     * Strips VCF extension from the given path, if it has one.
+     *
+     * @param path Path to modify. May not be null.
+     * @return Input path without a VCF extension
+     */
+    private static Path removeVcfExtension(final Path path) {
+        Utils.nonNull(path);
+        String newPath = path.toString();
+        for (final String testExtension : FileExtensions.VCF_LIST) {
+            if (newPath.endsWith(testExtension)) {
+                newPath = newPath.substring(0, newPath.length() - testExtension.length());
+                break;
+            }
+        }
+        return Paths.get(newPath);
     }
 
     /**

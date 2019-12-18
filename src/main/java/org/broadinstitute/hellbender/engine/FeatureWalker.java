@@ -6,8 +6,7 @@ import org.broadinstitute.hellbender.engine.filters.CountingReadFilter;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-
-import java.io.File;
+import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 /**
  * A FeatureWalker is a tool that processes a {@link Feature} at a time from a source of Features, with
@@ -23,6 +22,7 @@ import java.io.File;
 public abstract class FeatureWalker<F extends Feature> extends WalkerBase {
 
     private FeatureDataSource<F> drivingFeatures;
+    private Object header;
 
     @Override
     public boolean requiresFeatures(){
@@ -55,16 +55,16 @@ public abstract class FeatureWalker<F extends Feature> extends WalkerBase {
 
     @SuppressWarnings("unchecked")
     private void initializeDrivingFeatures() {
-        final File drivingFile = getDrivingFeatureFile();
-        final FeatureCodec<? extends Feature, ?> codec = FeatureManager.getCodecForFile(drivingFile.toPath());
+        final GATKPath drivingFeaturesPath = getDrivingFeaturesPath();
+        final FeatureCodec<? extends Feature, ?> codec = FeatureManager.getCodecForFile(IOUtils.getPath(drivingFeaturesPath.toString()));
         if (isAcceptableFeatureType(codec.getFeatureType())) {
-            drivingFeatures = new FeatureDataSource<>(new FeatureInput<>(drivingFile.getAbsolutePath()), FeatureDataSource.DEFAULT_QUERY_LOOKAHEAD_BASES, null, cloudPrefetchBuffer, cloudIndexPrefetchBuffer, referenceArguments.getReferencePath());
-
-            final FeatureInput<F> drivingFeaturesInput = new FeatureInput<>(drivingFile.getAbsolutePath(), "drivingFeatureFile");
+            final FeatureInput<F> drivingFeaturesInput = new FeatureInput<>(drivingFeaturesPath.toString());
+            drivingFeatures = new FeatureDataSource<>(drivingFeaturesInput, FeatureDataSource.DEFAULT_QUERY_LOOKAHEAD_BASES, null, cloudPrefetchBuffer, cloudIndexPrefetchBuffer, referenceArguments.getReferencePath());
             features.addToFeatureSources(0, drivingFeaturesInput, codec.getFeatureType(), cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
                                          referenceArguments.getReferencePath());
+            header = getHeaderForFeatures(drivingFeaturesInput);
         } else {
-            throw new UserException("File " + drivingFile + " contains features of the wrong type.");
+            throw new UserException("File " + drivingFeaturesPath.toPath() + " contains features of the wrong type.");
         }
     }
 
@@ -147,5 +147,13 @@ public abstract class FeatureWalker<F extends Feature> extends WalkerBase {
      *
      * @return never {@code null}.
      */
-    public abstract File getDrivingFeatureFile();
+    public abstract GATKPath getDrivingFeaturesPath();
+
+
+    /**
+     * Returns the header of the driving features file.
+     */
+    public Object getDrivingFeaturesHeader() {
+        return header;
+    }
 }
