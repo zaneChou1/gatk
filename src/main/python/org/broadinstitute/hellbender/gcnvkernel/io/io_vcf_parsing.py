@@ -61,7 +61,7 @@ def read_sample_segments_and_calls(intervals_vcf: str,
                 raise
         # once start matches, move the interval end
         while end_interval is not None and try_getting_info_attribute(segments_rec, 'END') > \
-                try_getting_info_attribute(end_interval, 'END') + 1:  # some sort of gCNV off-by-one error
+                try_getting_info_attribute(end_interval, 'END'):
             try:
                 end_interval = next(interval_end_iter)
                 segment_end_index += 1
@@ -70,9 +70,9 @@ def read_sample_segments_and_calls(intervals_vcf: str,
                 print('WARN: ran out of intervals with segment end unmatched')
                 end_interval = None
 
-        if intervals_copy_number != segment_copy_number:
-            print('Warning: maybe these should not have been merged if they have different copy numbers')
         # add the segment
+        if segment_end_index < segment_start_index:
+            print('Sample {0} contains segment at {1}:{2} with end index greater than start index'.format(sample_name, contig, segments_rec.POS))
         path.append((segment_copy_number, segment_start_index, segment_end_index))
         # do this the dumb way because each reader gets the same iterator
         segment_end_index = 0

@@ -87,8 +87,6 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
         Utils.validateArg(queryLookaheadBases >= 0, "Query lookahead bases must be >= 0");
         Utils.validateArg(featureInputs != null && featureInputs.size() > 0, "FeatureInputs list must be non-null and non-empty");
 
-        this.skipDictionaryValidation = skipDictionaryValidation;
-
         featureInputs.forEach(
                 featureInput -> featureDataSources.add(
                         new FeatureDataSource<>(featureInput, queryLookaheadBases, VariantContext.class, cloudPrefetchBuffer, cloudIndexPrefetchBuffer,
@@ -102,7 +100,9 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
         // 2) Create and cache a merged header using versions of the individual headers from each data source that
         //    have been updated to include the actual dictionary returned from that data source
         //
-        validateAllSequenceDictionaries();
+        if (!skipDictionaryValidation) {
+            validateAllSequenceDictionaries();
+        }
         mergedHeader = getMergedHeader();
         mergedSamples = getSortedSamples();
         if ((mergedHeader == null || mergedHeader.getSequenceDictionary() == null) && featureInputs.size() > 1) {
@@ -284,36 +284,34 @@ public final class MultiVariantDataSource implements GATKDataSource<VariantConte
      */
     private void validateAllSequenceDictionaries() {
         final Map<String, FeatureDataSource<VariantContext>> contigMap = new HashMap<>();
-        if (!skipDictionaryValidation) {
-            featureDataSources.forEach(
-                    ds -> {
-                        final SAMSequenceDictionary dictionary = ds.getSequenceDictionary();
-                        if (dictionary == null) {
-                            logger.warn(
-                                    "A sequence dictionary is required for each input when using multiple inputs, and one could" +
-                                            " not be obtained for feature input: " + ds.getName() +
-                                            ". The input may not exist or may not have a valid header");
-                        } else {
-                            //This is HORRIFICALLY inefficient and is going to bite me when we do large cohorts
-                            dictionary.getSequences().forEach(
-                                    sourceSequence -> {
-                                        final String sourceSequenceName = sourceSequence.getSequenceName();
-                                        final FeatureDataSource<VariantContext> previousDataSource = contigMap.getOrDefault(sourceSequenceName, null);
-                                        if (previousDataSource != null) {
-                                            final SAMSequenceDictionary previousDictionary = previousDataSource.getSequenceDictionary();
-                                            final SAMSequenceRecord previousSequence = previousDictionary.getSequence(sourceSequenceName);
-                                            validateSequenceDictionaryRecords(
-                                                    ds.getName(), dictionary, sourceSequence,
-                                                    previousDataSource.getName(), previousDictionary, previousSequence);
-                                        } else {
-                                            contigMap.put(sourceSequenceName, ds);
-                                        }
-                                    }
-                            );
-                        }
-                    }
-            );
-        }
+        featureDataSources.forEach(
+            ds -> {
+                final SAMSequenceDictionary dictionary = ds.getSequenceDictionary();
+                if (dictionary == null) {
+                    logger.warn(
+                            "A sequence dictionary is required for each input when using multiple inputs, and one could" +
+                                    " not be obtained for feature input: " + ds.getName() +
+                                    ". The input may not exist or may not have a valid header");
+                } else {
+                    //This is HORRIFICALLY inefficient and is going to bite me when we do large cohorts
+                    dictionary.getSequences().forEach(
+                            sourceSequence -> {
+                                final String sourceSequenceName = sourceSequence.getSequenceName();
+                                final FeatureDataSource<VariantContext> previousDataSource = contigMap.getOrDefault(sourceSequenceName, null);
+                                if (previousDataSource != null) {
+                                    final SAMSequenceDictionary previousDictionary = previousDataSource.getSequenceDictionary();
+                                    final SAMSequenceRecord previousSequence = previousDictionary.getSequence(sourceSequenceName);
+                                    validateSequenceDictionaryRecords(
+                                            ds.getName(), dictionary, sourceSequence,
+                                            previousDataSource.getName(), previousDictionary, previousSequence);
+                                } else {
+                                    contigMap.put(sourceSequenceName, ds);
+                                }
+                            }
+                    );
+                }
+            }
+        );
     }
 
     // Cross validate the length and md5 for a pair of sequence records.

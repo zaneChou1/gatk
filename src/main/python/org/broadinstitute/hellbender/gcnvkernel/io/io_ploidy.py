@@ -125,6 +125,8 @@ class SamplePloidyWriter:
                 ploidy_j[j], ploidy_genotyping_quality_j[j] = model_commons.perform_genotyping(log_q_ploidy_jk[j, :])
                 if ploidy_genotyping_quality_j[j] < self.ploidy_gq_filter:
                     ploidy_j[j] = np.argmax(self.ploidy_config.contig_ploidy_prior_map.get(j))
+                    _logger.warning("Ploidy call for contig at index {0} is lower quality than the specified GQ "
+                                    "threshold of {1}.  Using ploidy from highest prior instead.".format(j, self.ploidy_gq_filter))
 
             # generate sample ploidy metadata
             sample_ploidy_metadata = SamplePloidyMetadata(

@@ -939,9 +939,9 @@ public abstract class SegmentedCpxVariantSimpleVariantExtractor implements Seria
         }
     }
 
-    private static final Allele altSymbAlleleDel = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_ALLELE_DEL));
-    private static final Allele altSymbAlleleIns = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_ALLELE_INS));
-    private static final Allele altSymbAlleleInv = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_ALLELE_INV));
+    private static final Allele altSymbAlleleDel = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_STRING_DEL));
+    private static final Allele altSymbAlleleIns = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_STRING_INS));
+    private static final Allele altSymbAlleleInv = Allele.create(SimpleSVType.createBracketedSymbAlleleString(SYMB_ALT_STRING_INV));
 
     /**
      * Note that {@code delRange} is expected to be pre-process to VCF spec compatible,

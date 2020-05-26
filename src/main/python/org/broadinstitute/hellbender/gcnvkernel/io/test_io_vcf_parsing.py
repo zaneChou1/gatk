@@ -5,10 +5,10 @@ import io_vcf_parsing as io
 class test_io_vcf_parsing(TestCase):
     def test_read_sample_segments_and_calls(self):
 
-        clustered_vcf = '/Users/gauthier/workspaces/gCNVpipeline/1000G/clustered.latest.vcf.gz'
+        clustered_vcf = '/Users/gauthier/workspaces/gCNVpipeline/1000G/clustered.vcf.gz'
         pesky_intervals_vcf = '/Users/gauthier/workspaces/gCNVpipeline/1000G/genotyped-intervals-HG00099.mapped.ILLUMINA.bwa.GBR.exome.20130415.bam.cram.vcf.gz'
         pesky_sample_name = 'HG00099'
-        contig = '9'
+        contig = '14'
         debug_path = io.read_sample_segments_and_calls(pesky_intervals_vcf, clustered_vcf, pesky_sample_name, contig)
         self.assertTrue(len(debug_path) == 25)
 

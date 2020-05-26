@@ -67,6 +67,21 @@ opt_group.add_argument("--clustered_vcf",
                        required=False,
                        help="VCF with clustered breakpoints and calls for each sample")
 
+opt_group.add_argument("--duplication_qs_threshold",
+                       type=float,
+                       required=False,
+                       help="Filter duplications with QS less than this threshold")
+
+opt_group.add_argument("--het_deletion_qs_threshold",
+                       type=float,
+                       required=False,
+                       help="Filter heterozygous deletions with QS less than this threshold")
+
+opt_group.add_argument("--hom_deletion_qs_threshold",
+                       type=float,
+                       required=False,
+                       help="Filter homozygous deletions with QS less than this threshold")
+
 if __name__ == "__main__":
 
     # parse arguments

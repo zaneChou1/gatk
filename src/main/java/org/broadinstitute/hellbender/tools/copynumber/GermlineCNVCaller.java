@@ -405,8 +405,7 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         final List<String> arguments = new ArrayList<>(Arrays.asList(
                 "--ploidy_calls_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(inputContigPloidyCallsDir),
                 "--output_calls_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(outputDirArg + outputPrefix + CALLS_PATH_SUFFIX),
-                "--output_tracking_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(outputDirArg + outputPrefix + TRACKING_PATH_SUFFIX),
-                "--ploidy_correction_gq_threshold=20"));
+                "--output_tracking_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(outputDirArg + outputPrefix + TRACKING_PATH_SUFFIX)));
 
         //if a model path is given, add it to the argument (both COHORT and CASE modes)
         if (inputModelDir != null) {

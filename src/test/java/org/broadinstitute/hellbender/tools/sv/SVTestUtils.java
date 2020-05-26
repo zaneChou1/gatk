@@ -7,7 +7,10 @@ import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
 import htsjdk.variant.variantcontext.StructuralVariantType;
 import org.broadinstitute.hellbender.tools.spark.sv.utils.GATKSVVCFConstants;
+import org.broadinstitute.hellbender.utils.GenomeLoc;
+import org.broadinstitute.hellbender.utils.GenomeLocParser;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -20,18 +23,51 @@ public class SVTestUtils {
                     new SAMSequenceRecord("chr10", 135534747),
                     new SAMSequenceRecord("chrX", 155270560)));
 
+    final private static GenomeLocParser glParser = new GenomeLocParser(SVTestUtils.dict);
+
     final static int start = 10001;
 
     final static int length = 10000;
 
-    //separated from end of call1 by defragmenter padding
-    final static int start2 = (start + length -1) + (int)Math.round(length * SVDepthOnlyCallDefragmenter.getPaddingFraction());
+    //separated from end of call1 by defragmenter padding (in bin space, according to bins defined by targetIntervals below)
+    final static int start2 = start + length*14/9;
 
     final static int start3 = start + (int)Math.round(Math.floor((1-SVClusterEngine.getMinReciprocalOverlap())*length));
 
-    final static Genotype sample1 = GenotypeBuilder.create("sample1", Collections.singletonList(Allele.create("<"+ GATKSVVCFConstants.SYMB_ALT_ALLELE_DEL+">", false)));
+    //make intervals like xxxx----xxxx----xxxx----xxxx----xxxx
+    final static List<GenomeLoc> targetIntervals = new ArrayList<>(
+            Arrays.asList(glParser.createGenomeLoc("chr1", 1, length/2),  //left edge call
+                    glParser.createGenomeLoc("chr1", start, start + length/9),  //start of call1
+                    glParser.createGenomeLoc("chr1", start + length*2/9, start + length*3/9),
+                    glParser.createGenomeLoc("chr1", start + length*4/9, start + length*5/9),
+                    glParser.createGenomeLoc("chr1", start + length*6/9, start + length*7/9),
+                    glParser.createGenomeLoc("chr1", start + length*8/9, start + length),  //end of call1
+                    glParser.createGenomeLoc("chr1", start + length*10/9, start + length*11/9),  //padding for call1
+                    glParser.createGenomeLoc("chr1", start + length*12/9, start + length*13/9),  //padding for call1
+                    glParser.createGenomeLoc("chr1", start2, start2 + length/9),
+                    glParser.createGenomeLoc("chr1", start2 + length*2/9, start2 + length*3/9),
+                    glParser.createGenomeLoc("chr1", start2 + length*4/9, start2 + length*5/9),
+                    glParser.createGenomeLoc("chr1", start2 + length*6/9, start2 + length*7/9),
+                    glParser.createGenomeLoc("chr1", start2 + length*8/9, start2 + length),
+                    glParser.createGenomeLoc("chr1", start2 + length, start2 + length + length/9),
+                    glParser.createGenomeLoc("chr1", start2 + length+ length*2/9, start2 + length+ length*3/9),
+                    glParser.createGenomeLoc("chr1", start2 + length+ length*4/9, start2 + length+ length*5/9),
+                    glParser.createGenomeLoc("chr1", start2 + length+ length*6/9, start2 + length+ length*7/9),
+                    glParser.createGenomeLoc("chr1", start2 + length+ length*8/9, start2 + length+ length),
+                    glParser.createGenomeLoc("chr1", chr1Length - 99, chr1Length),
+                    glParser.createGenomeLoc("chr10", start, start + length - 1)))
+            ;
 
-    final static Genotype sample2 = GenotypeBuilder.create("sample2", Collections.singletonList(Allele.create("<"+GATKSVVCFConstants.SYMB_ALT_ALLELE_DUP+">", false)));
+
+
+    final static GenotypeBuilder gb1 = new GenotypeBuilder("sample1", Collections.singletonList(Allele.create("<"+ GATKSVVCFConstants.SYMB_ALT_STRING_DEL +">", false)));
+    final static GenotypeBuilder gb2 = new GenotypeBuilder("sample1", Collections.singletonList(Allele.create("<"+ GATKSVVCFConstants.SYMB_ALT_STRING_DEL +">", false)));
+
+    final static Genotype sample1 = gb1.attribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT, 1).make();
+
+    final static Genotype sample1_CN0 = gb2.attribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT, 0).make();
+
+    final static Genotype sample2 = GenotypeBuilder.create("sample2", Collections.singletonList(Allele.create("<"+GATKSVVCFConstants.SYMB_ALT_STRING_DUP +">", false)));
 
     final static SVCallRecordWithEvidence rightEdgeCall = new SVCallRecordWithEvidence("chr1", chr1Length - 99, true,
             "chr1", chr1Length, true,
@@ -41,8 +77,8 @@ public class SVTestUtils {
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
     final static SVCallRecordWithEvidence leftEdgeCall = new SVCallRecordWithEvidence("chr1", 1, true,
-            "chr1", length, true,
-            StructuralVariantType.CNV, length,
+            "chr1", length/2, true,
+            StructuralVariantType.CNV, length/2,
             Collections.singletonList(GATKSVVCFConstants.DEPTH_ALGORITHM),
             Arrays.asList(sample1, sample2),
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
@@ -68,8 +104,8 @@ public class SVTestUtils {
             Arrays.asList(sample1, sample2),
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
-    final static SVCallRecordWithEvidence call3 = new SVCallRecordWithEvidence("chr1", start2+10000, true,
-            "chr1", start2 + 10000 + length -1, true,
+    final static SVCallRecordWithEvidence call3 = new SVCallRecordWithEvidence("chr1", start2+length, true,
+            "chr1", start2 + length + length -1, true,
             StructuralVariantType.CNV, length,
             Collections.singletonList(GATKSVVCFConstants.DEPTH_ALGORITHM),
             Arrays.asList(sample1, sample2),
@@ -82,7 +118,21 @@ public class SVTestUtils {
             Arrays.asList(sample1, sample2),
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
 
-    final static Genotype sample3 = GenotypeBuilder.create("sample3", Collections.singletonList(Allele.create("<"+GATKSVVCFConstants.SYMB_ALT_ALLELE_DEL+">", false)));
+    final static SVCallRecordWithEvidence call1_CN1 = new SVCallRecordWithEvidence("chr1", start, true,
+            "chr1", start + length -1, true,
+            StructuralVariantType.CNV, length,
+            Collections.singletonList(GATKSVVCFConstants.DEPTH_ALGORITHM),
+            Arrays.asList(sample1),
+            Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
+    final static SVCallRecordWithEvidence call2_CN0 = new SVCallRecordWithEvidence("chr1", start2, true,
+            "chr1", start2 + length -1, true,
+            StructuralVariantType.CNV, length,
+            Collections.singletonList(GATKSVVCFConstants.DEPTH_ALGORITHM),
+            Arrays.asList(sample1_CN0),
+            Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+
+    final static Genotype sample3 = GenotypeBuilder.create("sample3", Collections.singletonList(Allele.create("<"+GATKSVVCFConstants.SYMB_ALT_STRING_DEL +">", false)));
 
     final static SVCallRecordWithEvidence sameBoundsSampleMismatch = new SVCallRecordWithEvidence("chr1", start, true,
             "chr1", start + length -1, true,

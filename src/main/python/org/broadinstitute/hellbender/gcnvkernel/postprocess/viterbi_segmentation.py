@@ -188,12 +188,15 @@ class ViterbiSegmentationEngine:
             # calculate qualities
             for call_copy_number, start_index, end_index in segments:
                 num_points = end_index - start_index + 1
-                segment = IntegerCopyNumberSegment(contig,
-                                                   contig_interval_list[start_index].start,
-                                                   contig_interval_list[end_index].end,
-                                                   num_points,
-                                                   call_copy_number,
-                                                   contig_baseline_copy_number)
+                try:
+                    segment = IntegerCopyNumberSegment(contig,
+                                                       contig_interval_list[start_index].start,
+                                                       contig_interval_list[end_index].end,
+                                                       num_points,
+                                                       call_copy_number,
+                                                       contig_baseline_copy_number)
+                except IndexError:
+                    print("end index out of bounds: {0} requested, max is {1}".format(end_index, len(contig_interval_list)))
                 if num_points > 1:
                     segment.quality_some_called = segment_quality_calculator.get_segment_quality_some_called(
                         start_index, end_index, call_copy_number)

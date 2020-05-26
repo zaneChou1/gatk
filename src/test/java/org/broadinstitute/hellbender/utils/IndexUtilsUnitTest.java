@@ -22,9 +22,9 @@ public final class IndexUtilsUnitTest extends GATKBaseTest {
     @DataProvider(name= "okFeatureFiles")
     public Object[][] okFeatureFiles() {
         return new Object[][] {
-                { new File(getToolTestDataDir(), "test_variants_for_index.vcf")},
-                { new File(getToolTestDataDir(), "test_variants_for_index.g.vcf")},
-                { new File(getToolTestDataDir(), "test_bed_for_index.bed")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.vcf")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.g.vcf")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_bed_for_index.bed")},
         };
     }
 
@@ -37,7 +37,7 @@ public final class IndexUtilsUnitTest extends GATKBaseTest {
     @DataProvider(name= "okFeatureFilesTabix")
     public Object[][] okFeatureFilesTabix() {
         return new Object[][] {
-                { new File(getToolTestDataDir(), "test_variants_for_index.vcf.bgz")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.vcf.bgz")},
         };
     }
 
@@ -50,9 +50,9 @@ public final class IndexUtilsUnitTest extends GATKBaseTest {
     @DataProvider(name= "failTabixIndexFiles")
     public Object[][] failTabixIndexFiles() {
         return new Object[][] {
-                { new File(getToolTestDataDir(), "test_variants_for_index.vcf")},
-                { new File(getToolTestDataDir(), "test_variants_for_index.g.vcf")},
-                { new File(getToolTestDataDir(), "test_bed_for_index.bed")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.vcf")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.g.vcf")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_bed_for_index.bed")},
         };
     }
 
@@ -65,7 +65,7 @@ public final class IndexUtilsUnitTest extends GATKBaseTest {
     @DataProvider(name= "failTribbleIndexFiles")
     public Object[][] failTribbleIndexFiles() {
         return new Object[][] {
-                { new File(getToolTestDataDir(), "test_variants_for_index.vcf.bgz")},
+                { IOUtils.getPath(getToolTestDataDir() + "test_variants_for_index.vcf.bgz")},
         };
     }
 

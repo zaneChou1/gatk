@@ -1,10 +1,13 @@
 package org.broadinstitute.hellbender.tools.sv;
 
+import com.google.common.primitives.Doubles;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.StructuralVariantType;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.broadinstitute.hellbender.tools.spark.sv.utils.GATKSVVCFConstants;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
+import org.broadinstitute.hellbender.utils.MathUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 
 import java.util.Collection;
@@ -19,13 +22,39 @@ public class SVClusterEngine extends LocatableClusterEngine<SVCallRecordWithEvid
     private final int MIN_BREAKEND_CLUSTERING_WINDOW = 50;
     private final int MAX_BREAKEND_CLUSTERING_WINDOW = 300;
     private final int MIXED_CLUSTERING_WINDOW = 2000;
+    private BreakpointSummaryStrategy breakpointSummaryStrategy;
 
-    public SVClusterEngine(final SAMSequenceDictionary dictionary) {
-        super(dictionary, CLUSTERING_TYPE.MAX_CLIQUE);
+    public enum BreakpointSummaryStrategy {
+        /**
+         * Use the (first) middle value to summarize cluster starts and ends, such that the start and end were seen in the data
+         */
+        MEDIAN_START_MEDIAN_END,
+
+        /**
+         * A conservative strategy to summarize a cluster by its smallest extent
+         */
+        MIN_START_MAX_END,
+
+        /**
+         * A permissive strategy to summarize a cluster by it largest extent
+         */
+        MAX_START_MIN_END,
+
+        /**
+         * Summarize a cluster using the mean value for each end, even if that value was not represented in any sample
+         */
+        MEAN_START_MEAN_END
+
     }
 
-    public SVClusterEngine(final SAMSequenceDictionary dictionary, boolean depthOnly) {
-        super(dictionary, depthOnly ? CLUSTERING_TYPE.SINGLE_LINKAGE : CLUSTERING_TYPE.MAX_CLIQUE);
+    public SVClusterEngine(final SAMSequenceDictionary dictionary) {
+        super(dictionary, CLUSTERING_TYPE.MAX_CLIQUE, null);
+        this.breakpointSummaryStrategy = BreakpointSummaryStrategy.MEDIAN_START_MEDIAN_END;
+    }
+
+    public SVClusterEngine(final SAMSequenceDictionary dictionary, boolean depthOnly, BreakpointSummaryStrategy strategy) {
+        super(dictionary, depthOnly ? CLUSTERING_TYPE.SINGLE_LINKAGE : CLUSTERING_TYPE.MAX_CLIQUE, null);
+        this.breakpointSummaryStrategy = strategy;
     }
 
     /**
@@ -42,9 +71,11 @@ public class SVClusterEngine extends LocatableClusterEngine<SVCallRecordWithEvid
         final int medianStart = startPositions.get(startPositions.size() / 2);
         final int medianEnd = endPositions.get(endPositions.size() / 2);
         final SVCallRecordWithEvidence exampleCall = cluster.iterator().next();
-        final int length = exampleCall.getContig().equals(exampleCall.getEndContig()) && !exampleCall.getType().equals(StructuralVariantType.INS) ? medianEnd - medianStart + 1: exampleCall.getLength();
+        final int length = exampleCall.getContig().equals(exampleCall.getEndContig()) && !exampleCall.getType().equals(StructuralVariantType.INS) ? medianEnd - medianStart + 1 : exampleCall.getLength();
         final List<String> algorithms = cluster.stream().flatMap(v -> v.getAlgorithms().stream()).distinct().collect(Collectors.toList());
         final List<Genotype> clusterSamples = cluster.stream().flatMap(v -> v.getGenotypes().stream()).collect(Collectors.toList());
+        final List<StructuralVariantType> observedTypes = cluster.stream().map(SVCallRecord::getType).distinct().collect(Collectors.toList());
+        final StructuralVariantType clusterType = observedTypes.size() == 1 ? observedTypes.get(0) : StructuralVariantType.CNV;
 
         final int newStart;
         final int newEnd;
@@ -53,20 +84,41 @@ public class SVClusterEngine extends LocatableClusterEngine<SVCallRecordWithEvid
             // left of start-supporting split reads
             final int mean = (medianStart + medianEnd) / 2;
             newStart = mean;
-            newEnd = mean + 1;
+            newEnd = mean;
         } else {
-            newStart = medianStart;
-            newEnd = medianEnd;
+            switch (this.breakpointSummaryStrategy) {
+                case MEDIAN_START_MEDIAN_END:
+                    newStart = medianStart;
+                    newEnd = medianEnd;
+                    break;
+                case MIN_START_MAX_END:
+                    newStart = startPositions.stream().min(Integer::compareTo).orElse(startPositions.get(0));
+                    newEnd = endPositions.stream().max(Integer::compareTo).orElse(endPositions.get(0));
+                    break;
+                case MAX_START_MIN_END:
+                    newStart = startPositions.stream().max(Integer::compareTo).orElse(startPositions.get(0));
+                    newEnd = endPositions.stream().min(Integer::compareTo).orElse(endPositions.get(0));
+                    break;
+                case MEAN_START_MEAN_END:
+                    newStart = (int)Math.round(new Mean().evaluate(Doubles.toArray(startPositions)));
+                    newEnd = (int)Math.round(new Mean().evaluate(Doubles.toArray(endPositions)));
+                    break;
+                default:
+                    newStart = medianStart;
+                    newEnd = medianEnd;
+            }
+
         }
-        //??? does evidence not need to be merged???
+
+        //TODO: merge evidence for WGS data
         return new SVCallRecordWithEvidence(exampleCall.getContig(), newStart, exampleCall.getStartStrand(),
-                exampleCall.getEndContig(), newEnd, exampleCall.getEndStrand(), exampleCall.getType(), length, algorithms, clusterSamples,
+                exampleCall.getEndContig(), newEnd, exampleCall.getEndStrand(), clusterType, length, algorithms, clusterSamples,
                 exampleCall.getStartSplitReadSites(), exampleCall.getEndSplitReadSites(), exampleCall.getDiscordantPairs());
     }
 
     @Override
     protected boolean clusterTogether(final SVCallRecordWithEvidence a, final SVCallRecordWithEvidence b) {
-        if (!a.getType().equals(b.getType())) return false;
+        //if (!a.getType().equals(b.getType())) return false;  //TODO: do we need to keep dels and dupes separate?
         final boolean depthOnlyA = isDepthOnlyCall(a);
         final boolean depthOnlyB = isDepthOnlyCall(b);
         if (depthOnlyA && depthOnlyB) {
@@ -186,13 +238,21 @@ public class SVClusterEngine extends LocatableClusterEngine<SVCallRecordWithEvid
     }
 
     private SimpleInterval getStartClusteringInterval(final SVCallRecordWithEvidence call) {
-        final int padding = getEndpointClusteringPadding(call);
-        return call.getStartAsInterval().expandWithinContig(padding, dictionary);
+        if (this.genomicToBinMap == null) {
+            final int padding = getEndpointClusteringPadding(call);
+            return call.getStartAsInterval().expandWithinContig(padding, dictionary);
+        } else {
+            return call.getStartAsInterval();
+        }
     }
 
     private SimpleInterval getEndClusteringInterval(final SVCallRecordWithEvidence call) {
-        final int padding =  getEndpointClusteringPadding(call);
-        return call.getEndAsInterval().expandWithinContig(padding, dictionary);
+        if (this.genomicToBinMap == null) {
+            final int padding = getEndpointClusteringPadding(call);
+            return call.getEndAsInterval().expandWithinContig(padding, dictionary);
+        } else {
+            return call.getStartAsInterval();
+        }
     }
 
     private int getEndpointClusteringPadding(final SVCallRecordWithEvidence call) {
