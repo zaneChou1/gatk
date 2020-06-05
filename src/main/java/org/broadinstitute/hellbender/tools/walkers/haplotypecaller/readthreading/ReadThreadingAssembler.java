@@ -511,6 +511,7 @@ public final class ReadThreadingAssembler {
             throw new IllegalStateException("All reference graphs must have a reference sink vertex.");
         }
         if( !Arrays.equals(graph.getReferenceBytes(graph.getReferenceSourceVertex(), graph.getReferenceSinkVertex(), true, true), refHaplotype.getBases()) ) {
+            System.out.println(refHaplotype.getGenomeLocation());
             throw new IllegalStateException("Mismatch between the reference haplotype and the reference assembly graph path. for graph " + graph +
                     " graph = " + new String(graph.getReferenceBytes(graph.getReferenceSourceVertex(), graph.getReferenceSinkVertex(), true, true)) +
                     " haplotype = " + new String(refHaplotype.getBases())
