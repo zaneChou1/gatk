@@ -45,12 +45,12 @@ import org.broadinstitute.hellbender.utils.read.*;
  * </pre>
  *
  */
-@DocumentedFeature
 @CommandLineProgramProperties(
         summary = "Left-aligns indels from reads in a SAM/BAM/CRAM file.",
         oneLineSummary = "Left-aligns indels from reads in a SAM/BAM/CRAM file",
         programGroup = ReadDataManipulationProgramGroup.class
 )
+@DocumentedFeature
 @RuntimeProperties
 public final class LeftAlignIndels extends ReadWalker {
 

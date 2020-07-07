@@ -57,12 +57,12 @@ import java.util.stream.Collectors;
  *     --split-library-name
  * </pre>
  */
-@DocumentedFeature
 @CommandLineProgramProperties(
         summary = "Outputs reads from a SAM/BAM/CRAM by read group, sample and library name",
         oneLineSummary = "Outputs reads from a SAM/BAM/CRAM by read group, sample and library name",
         programGroup = ReadDataManipulationProgramGroup.class
 )
+@DocumentedFeature
 @RuntimeProperties
 public final class SplitReads extends ReadWalker {
 

@@ -24,12 +24,12 @@ import org.broadinstitute.hellbender.utils.read.GATKRead;
  *     -I input_reads.bam
  * </pre>
  */
-@DocumentedFeature
 @CommandLineProgramProperties(
 	summary = "Count reads in a SAM/BAM/CRAM file.",
 	oneLineSummary = "Count reads in a SAM/BAM/CRAM file",
     programGroup = CoverageAnalysisProgramGroup.class
 )
+@DocumentedFeature
 @RuntimeProperties
 public final class CountReads extends ReadWalker {
 

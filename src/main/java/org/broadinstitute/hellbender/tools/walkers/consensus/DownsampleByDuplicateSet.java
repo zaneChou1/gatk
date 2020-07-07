@@ -15,11 +15,6 @@ import picard.cmdline.programgroups.ReadDataManipulationProgramGroup;
 
 import java.util.Random;
 
-@CommandLineProgramProperties(
-        summary = "Discard a set fraction of duplicate sets from a UMI-grouped bam",
-        oneLineSummary = "Discard a set fraction of duplicate sets from a UMI-grouped bam",
-        programGroup = ReadDataManipulationProgramGroup.class
-)
 /**
  * Given a bam grouped by the same unique molecular identifier (UMI), this tool drops a specified fraction of duplicate sets and returns a new bam.
  * A duplicate set refers to a group of reads whose fragments start and end at the same genomic coordinate _and_ share the same UMI.
@@ -57,6 +52,11 @@ import java.util.Random;
  * --fraction-to-keep 0.95 \
  * -O umiGrouped_0.95.bam
  **/
+@CommandLineProgramProperties(
+        summary = "Discard a set fraction of duplicate sets from a UMI-grouped bam",
+        oneLineSummary = "Discard a set fraction of duplicate sets from a UMI-grouped bam",
+        programGroup = ReadDataManipulationProgramGroup.class
+)
 @BetaFeature
 @RuntimeProperties
 public class DownsampleByDuplicateSet extends DuplicateSetWalker {

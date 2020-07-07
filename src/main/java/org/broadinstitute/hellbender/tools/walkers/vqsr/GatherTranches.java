@@ -4,6 +4,8 @@ import htsjdk.samtools.util.IOUtil;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.RuntimeProperties;
+import org.broadinstitute.barclay.argparser.WorkflowResource;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
@@ -23,9 +25,11 @@ import java.util.*;
 )
 @BetaFeature
 @DocumentedFeature
+@RuntimeProperties
 public class GatherTranches extends CommandLineProgram {
     @Argument(fullName = StandardArgumentDefinitions.INPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.INPUT_SHORT_NAME, doc="List of scattered tranches files")
+    @WorkflowResource(input=true, output=false)
     public final List<GATKPath> inputReports = new ArrayList<>();
 
     /**
@@ -47,6 +51,7 @@ public class GatherTranches extends CommandLineProgram {
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME, doc="File to output the gathered tranches file to")
+    @WorkflowResource(input=true, output=false)
     public GATKPath outputReport;
 
     @Override

@@ -46,13 +46,13 @@ import java.util.List;
  * Reads transformed in this way also have their CIGARs rewritten to match the new
  * sequence information.
  */
-@DocumentedFeature
-@ExperimentalFeature
 @CommandLineProgramProperties(
         summary = "Replace bases in reads with reference bases.",
         oneLineSummary = "Replace bases in reads with reference bases.",
         programGroup = OtherProgramGroup.class
 )
+@DocumentedFeature
+@ExperimentalFeature
 @RuntimeProperties
 public final class ReadAnonymizer extends ReadWalker {
 

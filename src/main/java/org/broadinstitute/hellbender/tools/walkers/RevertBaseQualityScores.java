@@ -21,13 +21,13 @@ import org.broadinstitute.hellbender.utils.read.SAMFileGATKReadWriter;
 import java.util.Collections;
 import java.util.List;
 
-@DocumentedFeature
 @CommandLineProgramProperties(
         summary = "Simple tool to revert the quality scores in a SAM/BAM/CRAM file. Copies the scores from the OQ tag to the quality scores.",
         oneLineSummary = "Revert Quality Scores in a SAM/BAM/CRAM file",
         usageExample = "hellbender RevertQualityScores -I input.bam -O output.bam",
         programGroup = ReadDataManipulationProgramGroup.class
 )
+@DocumentedFeature
 @RuntimeProperties
 public class RevertBaseQualityScores extends ReadWalker {
 

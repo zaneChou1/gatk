@@ -33,13 +33,13 @@ import java.text.NumberFormat;
  *     -I input.bam
  * </pre>
  */
-@DocumentedFeature
 @CommandLineProgramProperties(
 	summary = "Accumulate flag statistics given a BAM file, e.g. total number of reads with QC failure flag set, " +
             "number of duplicates, percentage mapped etc.",
 	oneLineSummary = "Accumulate flag statistics given a BAM file",
     programGroup = DiagnosticsAndQCProgramGroup.class
 )
+@DocumentedFeature
 @RuntimeProperties
 public final class FlagStat extends ReadWalker {
 
