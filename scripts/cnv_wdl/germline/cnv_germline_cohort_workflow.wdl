@@ -88,6 +88,7 @@ workflow CNVGermlineCohortWorkflow {
       ##############################################
       #### optional arguments for CollectCounts ####
       ##############################################
+      Array[String]? disabled_read_filters_for_collect_counts
       String? collect_counts_format
       Boolean? collect_counts_enable_indexing
       Int? mem_gb_for_collect_counts
@@ -153,6 +154,8 @@ workflow CNVGermlineCohortWorkflow {
       #### arguments for PostprocessGermlineCNVCalls ####
       ###################################################
       Int ref_copy_number_autosomal_contigs
+      Int? mem_gb_for_postprocess_germline_cnv_calls
+      Int? disk_space_gb_for_postprocess_germline_cnv_calls
       Array[String]? allosomal_contigs
 
       ##########################
@@ -207,6 +210,7 @@ workflow CNVGermlineCohortWorkflow {
                 ref_fasta_dict = ref_fasta_dict,
                 format = collect_counts_format,
                 enable_indexing = collect_counts_enable_indexing,
+                disabled_read_filters = disabled_read_filters_for_collect_counts,
                 gatk4_jar_override = gatk4_jar_override,
                 gatk_docker = gatk_docker,
                 mem_gb = mem_gb_for_collect_counts,

@@ -50,6 +50,7 @@ workflow CNVGermlineCaseScatteredWorkflow {
       ##############################################
       #### optional arguments for CollectCounts ####
       ##############################################
+      Array[String]? disabled_read_filters_for_collect_counts
       String? collect_counts_format
       Boolean? collect_counts_enable_indexing
       Int? mem_gb_for_collect_counts
@@ -151,6 +152,7 @@ workflow CNVGermlineCaseScatteredWorkflow {
                 preemptible_attempts = preemptible_attempts,
                 padding = padding,
                 bin_length = bin_length,
+                disabled_read_filters_for_collect_counts = disabled_read_filters_for_collect_counts,
                 collect_counts_format = collect_counts_format,
                 collect_counts_enable_indexing = collect_counts_enable_indexing,
                 mem_gb_for_collect_counts = mem_gb_for_collect_counts,
