@@ -2,7 +2,7 @@ package org.broadinstitute.hellbender.engine;
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem;
 
-import htsjdk.io.HtsjdkPath;
+import htsjdk.io.HtsPath;
 
 import org.broadinstitute.barclay.argparser.TaggedArgument;
 import org.broadinstitute.barclay.argparser.TaggedArgumentParser;
@@ -25,7 +25,7 @@ import java.util.Objects;
  * GATK tool command line arguments that are input or output resources. These can
  * have an optional name supplied on the command line, as well as one or more optional tag/value pairs.
  */
-public class GATKPath extends HtsjdkPath implements TaggedArgument, Serializable {
+public class GATKPath extends HtsPath implements TaggedArgument, Serializable {
     private static final long serialVersionUID = 1L;
 
     public static final String HDFS_SCHEME = "hdfs";
