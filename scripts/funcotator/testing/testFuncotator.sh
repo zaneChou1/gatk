@@ -288,6 +288,7 @@ if [[ $r -eq 0 ]] && ${doRunLargeTests} ; then
 
   if [[ "${REF_VER}" == "hg19" ]] ; then
     INPUT=/Users/jonn/Development/NON_PUBLIC/0816201804HC0_R01C01.vcf
+
     #INPUT=/Users/jonn/Development/gatk/src/test/resources/large/funcotator/regressionTestVariantSet1.vcf
     #INPUT=/Users/jonn/Development/gatk/src/test/resources/large/funcotator/regressionTestVariantSet2.vcf
     #INPUT=/Users/jonn/Development/gatk/src/test/resources/large/funcotator/regressionTestHg19Large.vcf
