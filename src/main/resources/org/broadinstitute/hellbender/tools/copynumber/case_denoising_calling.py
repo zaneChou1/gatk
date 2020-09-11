@@ -1,4 +1,5 @@
 import os
+import sys
 
 # set theano flags
 user_theano_flags = os.environ.get("THEANO_FLAGS")
@@ -110,21 +111,21 @@ def update_args_dict_from_saved_model(input_model_path: str,
         loaded_denoising_config_dict = json.load(fp)
 
     # boolean flags
-    _args_dict['enable_bias_factors'] =\
+    _args_dict['enable_bias_factors'] = \
         loaded_denoising_config_dict['enable_bias_factors']
-    _args_dict['enable_explicit_gc_bias_modeling'] =\
+    _args_dict['enable_explicit_gc_bias_modeling'] = \
         loaded_denoising_config_dict['enable_explicit_gc_bias_modeling']
-    _args_dict['disable_bias_factors_in_active_class'] =\
+    _args_dict['disable_bias_factors_in_active_class'] = \
         loaded_denoising_config_dict['disable_bias_factors_in_active_class']
 
     # bias factor related
-    _args_dict['max_bias_factors'] =\
+    _args_dict['max_bias_factors'] = \
         loaded_denoising_config_dict['max_bias_factors']
 
     # gc-related
-    _args_dict['num_gc_bins'] =\
+    _args_dict['num_gc_bins'] = \
         loaded_denoising_config_dict['num_gc_bins']
-    _args_dict['gc_curve_sd'] =\
+    _args_dict['gc_curve_sd'] = \
         loaded_denoising_config_dict['gc_curve_sd']
 
     logging.info("- bias factors enabled: "
@@ -213,9 +214,14 @@ if __name__ == "__main__":
         logger.info("A saved optimizer state was provided to use as starting point...")
         task.fancy_opt.load(args.input_opt_path)
 
-    # go!
-    task.engage()
-    task.disengage()
+    try:
+        # go!
+        task.engage()
+        task.disengage()
+    except gcnvkernel.ConvergenceError as err:
+        logger.info(err.message)
+        sys.exit(239)
+
 
     # save calls
     gcnvkernel.io_denoising_calling.SampleDenoisingAndCallingPosteriorsWriter(

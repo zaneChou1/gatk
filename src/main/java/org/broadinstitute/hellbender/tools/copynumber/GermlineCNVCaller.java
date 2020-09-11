@@ -18,12 +18,14 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.io.Resource;
 import org.broadinstitute.hellbender.utils.python.PythonScriptExecutor;
+import org.broadinstitute.hellbender.utils.runtime.RestartScriptExecutorException;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import static org.broadinstitute.hellbender.tools.copynumber.arguments.CopyNumberArgumentValidationUtils.streamOfSubsettedAndValidatedReadCounts;
@@ -289,6 +291,8 @@ public final class GermlineCNVCaller extends CommandLineProgram {
     private SimpleIntervalCollection specifiedIntervals;
     private File specifiedIntervalsFile;
 
+    private final int randomGCNVSeed = 1984;
+
     @Override
     protected void onStartup() {
         /* check for successful import of gcnvkernel */
@@ -306,7 +310,15 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         final List<File> intervalSubsetReadCountFiles = writeIntervalSubsetReadCountFiles();
 
         //call python inference code
-        final boolean pythonReturnCode = executeGermlineCNVCallerPythonScript(intervalSubsetReadCountFiles);
+        boolean pythonReturnCode;
+        try {
+            pythonReturnCode = executeGermlineCNVCallerPythonScript(intervalSubsetReadCountFiles, randomGCNVSeed);
+        } catch (final RestartScriptExecutorException e) {
+            final Random generator = new Random(randomGCNVSeed);
+            final int nextGCNVSeed = generator.nextInt();
+            logger.info("The inference ran into a NaN error and needs to be restarted");
+            pythonReturnCode = executeGermlineCNVCallerPythonScript(intervalSubsetReadCountFiles, nextGCNVSeed);
+        }
 
         if (!pythonReturnCode) {
             throw new UserException("Python return code was non-zero.");
@@ -397,7 +409,7 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         return intervalSubsetReadCountFiles;
     }
 
-    private boolean executeGermlineCNVCallerPythonScript(final List<File> intervalSubsetReadCountFiles) {
+    private boolean executeGermlineCNVCallerPythonScript(final List<File> intervalSubsetReadCountFiles, final int randomSeed) {
         final PythonScriptExecutor executor = new PythonScriptExecutor(true);
         final String outputDirArg = CopyNumberArgumentValidationUtils.addTrailingSlashIfNecessary(outputDir.getAbsolutePath());
 
@@ -411,6 +423,7 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         if (inputModelDir != null) {
             arguments.add("--input_model_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(inputModelDir));
         }
+        arguments.add(String.format("--random_seed=%d", randomSeed));
 
         final String script;
         if (runMode == RunMode.COHORT) {

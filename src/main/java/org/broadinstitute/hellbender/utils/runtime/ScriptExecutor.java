@@ -121,6 +121,9 @@ public abstract class ScriptExecutor {
                     // process received SIGKILL, which might indicate OOM
                     message.append("\nThe exit code indicates that the process was terminated. This may mean the process requires additional memory.\n");
                 }
+                if (exitValue == 239) {
+                    throw new RestartScriptExecutorException("Script returned an error code indicating that it needs to be restarted with new random seed. \n");
+                }
                 //if debug was enabled the stdout/error were already output somewhere
                 if (!logger.isDebugEnabled()){
                     message.append(String.format("\nStdout: %s\nStderr: %s",
