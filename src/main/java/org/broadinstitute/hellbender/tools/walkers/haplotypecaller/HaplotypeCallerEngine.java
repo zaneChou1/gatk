@@ -46,8 +46,7 @@ import org.broadinstitute.hellbender.utils.variant.HomoSapiensConstants;
 import org.broadinstitute.hellbender.utils.variant.writers.GVCFWriter;
 
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
+import java.io.OutputStreamWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -74,7 +73,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
 
     private AssemblyRegionTrimmer trimmer;
 
-    private final PrintStream assemblyDebugOutStream;
+    private final OutputStreamWriter assemblyDebugOutStream;
 
     // the genotyping engine for the isActive() determination
     private MinimalGenotypingEngine activeRegionEvaluationGenotyperEngine = null;
@@ -165,7 +164,7 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         forceCallingAllelesPresent = hcArgs.alleles != null;
         initialize(createBamOutIndex, createBamOutMD5);
         if (hcArgs.assemblyStateOutput != null) {
-            assemblyDebugOutStream = new PrintStream(hcArgs.assemblyStateOutput.getOutputStream());
+            assemblyDebugOutStream = new OutputStreamWriter(hcArgs.assemblyStateOutput.getOutputStream());
         } else {
             assemblyDebugOutStream = null;
         }
@@ -527,19 +526,28 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.println("\n\n\n\n"+region.getSpan()+"\nNumber of reads in region: " + region.getReads().size() + "     they are:");
-            for (GATKRead read : region.getReads()) {
-                assemblyDebugOutStream.println(read.getName() + "   " + read.convertToSAMRecord(region.getHeader()).getFlags());
+            try {
+                assemblyDebugOutStream.write("\n\n\n\n" + region.getSpan() + "\nNumber of reads in region: " + region.getReads().size() + "     they are:");
+                for (GATKRead read : region.getReads()) {
+                    assemblyDebugOutStream.write(read.getName() + "   " + read.convertToSAMRecord(region.getHeader()).getFlags());
+                }
+            } catch (IOException e) {
+                throw new UserException("Error writing to debug output stream", e);
             }
-        }
+    }
 
-        // run the local assembler, getting back a collection of information on how we should proceed
+
+    // run the local assembler, getting back a collection of information on how we should proceed
         final AssemblyResultSet untrimmedAssemblyResult =  AssemblyBasedCallerUtils.assembleReads(region, givenAlleles, hcArgs, readsHeader, samplesList, logger, referenceReader, assemblyEngine, aligner, !hcArgs.doNotCorrectOverlappingBaseQualities);
 
         if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.println("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
-            for (String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(haplotype -> haplotype.toString()).sorted().collect(Collectors.toList())) {
-                assemblyDebugOutStream.println(haplotype);
+            try {
+                assemblyDebugOutStream.write("\nThere were " + untrimmedAssemblyResult.getHaplotypeList().size() + " haplotypes found. Here they are:");
+                for (String haplotype : untrimmedAssemblyResult.getHaplotypeList().stream().map(haplotype -> haplotype.toString()).sorted().collect(Collectors.toList())) {
+                    assemblyDebugOutStream.write(haplotype);
+                }
+            } catch (IOException e) {
+                throw new UserException("Error writing to debug output stream", e);
             }
         }
 
@@ -710,7 +718,11 @@ public final class HaplotypeCallerEngine implements AssemblyRegionEvaluator {
         }
 
         if (assemblyDebugOutStream != null) {
-            assemblyDebugOutStream.close();
+            try {
+                assemblyDebugOutStream.close();
+            } catch (IOException e) {
+                throw new UserException("Error closingdebug output stream", e);
+            }
         }
         // Write assembly region debug output if present
         assemblyEngine.printDebugHistograms();
