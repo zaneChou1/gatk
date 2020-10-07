@@ -19,6 +19,7 @@ import picard.cmdline.programgroups.VariantFilteringProgramGroup;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -176,12 +177,12 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         samplesFile = createSampleList();
 
         // Start the Python process and initialize a stream writer for streaming data to the Python code
-        pythonExecutor.start(generatePythonArguments(), enableJournal, pythonProfileResults);
+        pythonExecutor.start(Collections.emptyList(), enableJournal, pythonProfileResults);
         pythonExecutor.initStreamWriter(AsynchronousStreamWriter.stringSerializer);
 
         // Execute Python code to initialize training
         pythonExecutor.sendSynchronousCommand("import svgenotyper" + NL);
-        pythonExecutor.sendSynchronousCommand("args = svgenotyper.arguments.parse_args_train()" + NL);
+        pythonExecutor.sendSynchronousCommand("args = " + generatePythonArgumentsDictionary() + NL);
     }
 
     @Override
@@ -201,7 +202,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         final int batchSize = batchList.size();
         if (batchSize > 0) {
             final String svType = SV_TYPES.get(n).name();
-            final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str=%s)",
+            final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
                     batchSize, svType) + NL;
             pythonExecutor.startBatchWrite(pythonCommand, batchList);
             pythonExecutor.waitForPreviousBatchCompletion();
@@ -248,68 +249,43 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         return IOUtils.writeTempFile(samples, outputName + ".samples", ".tmp");
     }
 
-    private List<String> generatePythonArguments() {
+    private String generatePythonArgumentsDictionary() {
         if (samplesFile == null) {
             throw new RuntimeException("Samples file doesn't exist");
         }
         final List<String> arguments = new ArrayList<>();
-        arguments.add("--coverage-file");
-        arguments.add(coverageFile.getAbsolutePath());
-        arguments.add("--samples-file");
-        arguments.add(samplesFile.getAbsolutePath());
-        arguments.add("--output-name");
-        arguments.add(outputName);
-        arguments.add("--output-dir");
-        arguments.add(outputDir);
-        arguments.add("--device");
-        arguments.add(device);
-        arguments.add("--random-seed");
-        arguments.add(String.valueOf(randomSeed));
+        arguments.add("'coverage_file': '" + coverageFile.getAbsolutePath() + "'");
+        arguments.add("'samples_file': '" + samplesFile.getAbsolutePath() + "'");
+        arguments.add("'output_name': '" + outputName + "'");
+        arguments.add("'output_dir': '" + outputDir + "'");
+        arguments.add("'device': '" + device + "'");
+        arguments.add("'num_states': " + (numStates == 0 ? "None" : numStates));
+        arguments.add("'random_seed': " + randomSeed);
         if (numStates != 0) {
-            arguments.add("--num-states");
-            arguments.add(String.valueOf(numStates));
+            arguments.add("'num_states': " + numStates);
         }
-        arguments.add("--depth-dilution-factor");
-        arguments.add(String.valueOf(depthDilutionFactor));
-        arguments.add("--eps-pe");
-        arguments.add(String.valueOf(epsilonPE));
-        arguments.add("--eps-sr1");
-        arguments.add(String.valueOf(epsilonSR1));
-        arguments.add("--eps-sr2");
-        arguments.add(String.valueOf(epsilonSR2));
-        arguments.add("--lambda-pe");
-        arguments.add(String.valueOf(lambdaPE));
-        arguments.add("--lambda-sr1");
-        arguments.add(String.valueOf(lambdaSR1));
-        arguments.add("--lambda-sr2");
-        arguments.add(String.valueOf(lambdaSR2));
-        arguments.add("--phi-pe");
-        arguments.add(String.valueOf(phiPE));
-        arguments.add("--phi-sr1");
-        arguments.add(String.valueOf(phiSR1));
-        arguments.add("--phi-sr2");
-        arguments.add(String.valueOf(phiSR2));
-        arguments.add("--eta-q");
-        arguments.add(String.valueOf(etaQ));
-        arguments.add("--eta-r");
-        arguments.add(String.valueOf(etaR));
-        arguments.add("--lr-decay");
-        arguments.add(String.valueOf(lrDecay));
-        arguments.add("--lr-min");
-        arguments.add(String.valueOf(lrMin));
-        arguments.add("--lr-init");
-        arguments.add(String.valueOf(lrInit));
-        arguments.add("--adam-beta1");
-        arguments.add(String.valueOf(adamBeta1));
-        arguments.add("--adam-beta2");
-        arguments.add(String.valueOf(adamBeta2));
-        arguments.add("--max-iter");
-        arguments.add(String.valueOf(maxIter));
-        arguments.add("--iter-log-freq");
-        arguments.add(String.valueOf(iterLogFreq));
+        arguments.add("'depth_dilution_factor': " + depthDilutionFactor);
+        arguments.add("'eps_pe': " + epsilonPE);
+        arguments.add("'eps_sr1': " + epsilonSR1);
+        arguments.add("'eps_sr2': " + epsilonSR2);
+        arguments.add("'lambda_pe': " + lambdaPE);
+        arguments.add("'lambda_sr1': " + lambdaSR1);
+        arguments.add("'lambda_sr2': " + lambdaSR2);
+        arguments.add("'phi_pe': " + phiPE);
+        arguments.add("'phi_sr1': " + phiSR1);
+        arguments.add("'phi_sr2': " + phiSR2);
+        arguments.add("'eta_q': " + etaQ);
+        arguments.add("'eta_r': " + etaR);
+        arguments.add("'lr_decay': " + lrDecay);
+        arguments.add("'lr_min': " + lrMin);
+        arguments.add("'lr_init': " + lrInit);
+        arguments.add("'adam_beta1': " + adamBeta1);
+        arguments.add("'adam_beta2': " + adamBeta2);
+        arguments.add("'max_iter': " + maxIter);
+        arguments.add("'iter_log_freq': " + iterLogFreq);
         if (enableJit) {
-            arguments.add("--jit");
+            arguments.add("'jit': True");
         }
-        return arguments;
+        return "{ " + String.join(", ", arguments) + " }";
     }
 }

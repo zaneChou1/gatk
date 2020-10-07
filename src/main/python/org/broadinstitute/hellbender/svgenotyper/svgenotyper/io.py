@@ -89,7 +89,7 @@ def load_data(batch_size: int,
               device: str = 'cpu'):
     mean_count_df = pd.read_csv(mean_coverage_path, sep='\t', header=None, index_col=0)
     mean_count_t = torch.from_numpy(mean_count_df.values).to(device=device).squeeze(-1)
-    samples_np = np.loadtxt(samples_path)
+    samples_np = np.loadtxt(samples_path, dtype=str)
     vids_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t = load_batch(batch_size=batch_size, device=device)
     if vids_np.shape[0] == 0:
         return None
@@ -97,9 +97,6 @@ def load_data(batch_size: int,
                                                                              pe_t, sr1_t, sr2_t, mean_count_t, cnlp_t,
                                                                              ncn_t, device)
     return SVGenotyperData(svtype, vids_np, samples_np, pe_t, sr1_t, sr2_t, depth_t, rd_gt_prob_t)
-
-
-def validate_mean_count(mean_count_df, samples_np):
 
 
 def write_vcf(input_vcf_path: str, output_vcf_path: str, output_data: dict, global_stats: dict):
