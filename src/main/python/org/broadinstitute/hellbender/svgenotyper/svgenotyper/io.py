@@ -62,8 +62,11 @@ def load_batch(batch_size: int,
     sr2_list = []
     ncn_list = []
     cnlp_list = []
+    logging.info("batch_size = " + str(batch_size))
     for _ in range(batch_size):
+        logging.info("Waiting for FIFO data...")
         fifo_line = tool.readDataFIFO()
+        logging.info("Read FIFO data.")
         fifo_data = fifo_line.split('\t')
         vid_list.append(fifo_data[0])
         pe_list.append([int(x)] for x in fifo_data[1].split(';'))
@@ -71,6 +74,7 @@ def load_batch(batch_size: int,
         sr2_list.append([int(x)] for x in fifo_data[3].split(';'))
         ncn_list.append([int(x)] for x in fifo_data[4].split(';'))
         cnlp_list.append([int(x)] for x in fifo_data[5].split(';'))
+    logging.info("Done reading batches")
     vid_np = np.asarray(vid_list)
     pe_t = torch.tensor(pe_list, device=device)
     sr1_t = torch.tensor(sr1_list, device=device)

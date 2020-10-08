@@ -193,7 +193,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
                              final int n) {
         final StructuralVariantType svType = variant.getStructuralVariantType();
         if (svType.equals(SV_TYPES.get(n)) && !isDepthOnly(variant)) {
-            transferToPythonViaFifo(variant);
+            addVariantToBatch(variant);
         }
     }
 
@@ -204,6 +204,10 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
             final String svType = SV_TYPES.get(n).name();
             final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
                     batchSize, svType) + NL;
+            logger.debug("Batch size = " + batchSize);
+            for (final String str : batchList) {
+                logger.debug(str);
+            }
             pythonExecutor.startBatchWrite(pythonCommand, batchList);
             pythonExecutor.waitForPreviousBatchCompletion();
             batchList = new ArrayList<>();
@@ -216,7 +220,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         return null;
     }
 
-    private void transferToPythonViaFifo(final VariantContext variant) {
+    private void addVariantToBatch(final VariantContext variant) {
         final Map<String, StringBuilder> stringBuilderMap = FORMAT_FIELDS.stream()
                 .collect(Collectors.toMap(s -> s, s -> new StringBuilder()));
         final int numGenotypes = variant.getNSamples();

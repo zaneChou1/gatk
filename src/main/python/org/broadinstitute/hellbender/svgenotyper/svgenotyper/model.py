@@ -4,7 +4,8 @@ import pyro
 import pyro.distributions as dist
 from pyro import poutine
 from pyro.ops.indexing import Vindex
-from pyro.infer import config_enumerate, Predictive, infer_discrete
+from pyro.infer import config_enumerate, infer_discrete
+from pyro.infer.predictive import Predictive
 from pyro.infer.autoguide import AutoDiagonalNormal
 import torch
 
