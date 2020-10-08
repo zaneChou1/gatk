@@ -68,7 +68,9 @@ def run(args: dict,
         batch_size: int,
         svtype_str: str,
         default_dtype: torch.dtype = torch.float32):
-    logging.basicConfig(level=logging.INFO,
+    log_path = os.path.join(args['output_dir'], args['output_name'] + ".log.txt")
+    logging.basicConfig(filename=log_path,
+                        level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     pyro.enable_validation(True)
@@ -82,13 +84,22 @@ def run(args: dict,
     pyro.set_rng_seed(args['random_seed'])
 
     svtype = SVTypes[svtype_str]
-    model = SVGenotyperPyroModel(svtype=svtype, k=args['num_states'], mu_eps_pe=args['eps_pe'], mu_eps_sr1=args['eps_sr1'],
+    if args['num_states'] is not None:
+        num_states = args['num_states']
+    elif svtype in [SVTypes.DEL, SVTypes.INS, SVTypes.INV]:
+        num_states = 3
+    elif svtype == SVTypes.DUP:
+        num_states = 5
+    else:
+        raise ValueError('SV type {:s} not supported for genotyping.'.format(str(svtype.name)))
+
+    model = SVGenotyperPyroModel(svtype=svtype, k=num_states, mu_eps_pe=args['eps_pe'], mu_eps_sr1=args['eps_sr1'],
                                  mu_eps_sr2=args['eps_sr2'], mu_lambda_pe=args['lambda_pe'], mu_lambda_sr1=args['lambda_sr1'],
                                  mu_lambda_sr2=args['lambda_sr2'], var_phi_pe=args['phi_pe'], var_phi_sr1=args['phi_sr1'],
                                  var_phi_sr2=args['phi_sr2'], mu_eta_q=args['eta_q'], mu_eta_r=args['eta_r'],
                                  device=args['device'])
     data = io.load_data(batch_size=batch_size, mean_coverage_path=args['coverage_file'], samples_path=args['samples_file'],
-                        svtype=svtype, num_states=None, depth_dilution_factor=args['depth_dilution_factor'],
+                        svtype=svtype, num_states=model.k, depth_dilution_factor=args['depth_dilution_factor'],
                         device=args['device'])
     if data is None:
         logging.info("No records of type {:s} found.".format(str(svtype.name)))

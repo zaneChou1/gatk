@@ -62,19 +62,15 @@ def load_batch(batch_size: int,
     sr2_list = []
     ncn_list = []
     cnlp_list = []
-    logging.info("batch_size = " + str(batch_size))
     for _ in range(batch_size):
-        logging.info("Waiting for FIFO data...")
         fifo_line = tool.readDataFIFO()
-        logging.info("Read FIFO data.")
         fifo_data = fifo_line.split('\t')
         vid_list.append(fifo_data[0])
-        pe_list.append([int(x)] for x in fifo_data[1].split(';'))
-        sr1_list.append([int(x)] for x in fifo_data[2].split(';'))
-        sr2_list.append([int(x)] for x in fifo_data[3].split(';'))
-        ncn_list.append([int(x)] for x in fifo_data[4].split(';'))
-        cnlp_list.append([int(x)] for x in fifo_data[5].split(';'))
-    logging.info("Done reading batches")
+        pe_list.append([int(x) for x in fifo_data[1].split(';')])
+        sr1_list.append([int(x) for x in fifo_data[2].split(';')])
+        sr2_list.append([int(x) for x in fifo_data[3].split(';')])
+        ncn_list.append([int(x) for x in fifo_data[4].split(';')])
+        cnlp_list.append([[int(y) for y in x.split(',')] for x in fifo_data[5].split(';')])
     vid_np = np.asarray(vid_list)
     pe_t = torch.tensor(pe_list, device=device)
     sr1_t = torch.tensor(sr1_list, device=device)
@@ -97,6 +93,7 @@ def load_data(batch_size: int,
     vids_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t = load_batch(batch_size=batch_size, device=device)
     if vids_np.shape[0] == 0:
         return None
+
     pe_t, sr1_t, sr2_t, depth_t, rd_gt_prob_t = compute_preprocessed_tensors(num_states, svtype, depth_dilution_factor,
                                                                              pe_t, sr1_t, sr2_t, mean_count_t, cnlp_t,
                                                                              ncn_t, device)

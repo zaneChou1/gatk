@@ -35,7 +35,7 @@ class SVGenotyperData(object):
 class SVGenotyperPyroModel(object):
     def __init__(self,
                  svtype: SVTypes,
-                 k: int = None,
+                 k: int,
                  mu_eps_pe: float = 0.1,
                  mu_eps_sr1: float = 0.1,
                  mu_eps_sr2: float = 0.1,
@@ -49,6 +49,7 @@ class SVGenotyperPyroModel(object):
                  mu_eta_r: float = 0.01,
                  device: str = 'cpu',
                  loss: dict = None):
+        self.k = k
         self.mu_eps_pe = mu_eps_pe
         self.mu_eps_sr1 = mu_eps_sr1
         self.mu_eps_sr2 = mu_eps_sr2
@@ -66,15 +67,6 @@ class SVGenotyperPyroModel(object):
             self.loss = {'epoch': [], 'elbo': []}
         else:
             self.loss = loss
-
-        if k is not None:
-            self.k = k
-        elif svtype in [SVTypes.DEL, SVTypes.INS, SVTypes.INV]:
-            self.k = 3
-        elif svtype == SVTypes.DUP:
-            self.k = 5
-        else:
-            raise ValueError('SV type {:s} not supported for genotyping.'.format(str(svtype.name)))
 
         if svtype == SVTypes.DEL:
             self.latent_sites = ['pi_sr1', 'pi_sr2', 'pi_pe', 'pi_rd', 'eps_pe', 'eps_sr1', 'eps_sr2',

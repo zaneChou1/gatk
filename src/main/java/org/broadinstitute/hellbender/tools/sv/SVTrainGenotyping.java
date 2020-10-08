@@ -8,6 +8,7 @@ import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
 import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.barclay.help.DocumentedFeature;
+import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.FeatureContext;
 import org.broadinstitute.hellbender.engine.MultiplePassVariantWalker;
 import org.broadinstitute.hellbender.engine.ReadsContext;
@@ -15,7 +16,6 @@ import org.broadinstitute.hellbender.engine.ReferenceContext;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.python.StreamingPythonScriptExecutor;
 import org.broadinstitute.hellbender.utils.runtime.AsynchronousStreamWriter;
-import picard.cmdline.programgroups.VariantFilteringProgramGroup;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @CommandLineProgramProperties(
         summary = SVTrainGenotyping.USAGE_SUMMARY,
         oneLineSummary = SVTrainGenotyping.USAGE_ONE_LINE_SUMMARY,
-        programGroup = VariantFilteringProgramGroup.class
+        programGroup = StructuralVariantDiscoveryProgramGroup.class
 )
 
 public class SVTrainGenotyping extends MultiplePassVariantWalker {
@@ -155,8 +155,8 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
             StructuralVariantType.DEL,
             StructuralVariantType.DUP,
             StructuralVariantType.INS,
-            StructuralVariantType.INV,
-            StructuralVariantType.BND
+            StructuralVariantType.INV
+            //StructuralVariantType.BND  # TODO
     );
 
     public static List<String> FORMAT_FIELDS = Lists.newArrayList(
@@ -204,10 +204,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
             final String svType = SV_TYPES.get(n).name();
             final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
                     batchSize, svType) + NL;
-            logger.debug("Batch size = " + batchSize);
-            for (final String str : batchList) {
-                logger.debug(str);
-            }
+            logger.info(String.format("Processing batch of %d variants of type %s", batchSize, svType));
             pythonExecutor.startBatchWrite(pythonCommand, batchList);
             pythonExecutor.waitForPreviousBatchCompletion();
             batchList = new ArrayList<>();
@@ -241,6 +238,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
             stringBuilder.append(stringBuilderMap.get(attribute).toString() + separator);
             attributeIndex++;
         }
+        stringBuilder.append("\n");
         batchList.add(stringBuilder.toString());
     }
 
@@ -287,9 +285,7 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         arguments.add("'adam_beta2': " + adamBeta2);
         arguments.add("'max_iter': " + maxIter);
         arguments.add("'iter_log_freq': " + iterLogFreq);
-        if (enableJit) {
-            arguments.add("'jit': True");
-        }
+        arguments.add("'jit': " + (enableJit ? "True" : "False"));
         return "{ " + String.join(", ", arguments) + " }";
     }
 }
