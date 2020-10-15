@@ -72,7 +72,8 @@ public final class InbreedingCoeff extends PedigreeAnnotation implements Standar
         Utils.nonNull(vc);
         final GenotypesContext genotypes = getFounderGenotypes(vc);
         if (genotypes == null || genotypes.size() < MIN_SAMPLES || !vc.isVariant()) {
-            logger.warn("InbreedingCoeff will not be calculated; at least " + MIN_SAMPLES + " samples must have called genotypes");
+            logger.warn("InbreedingCoeff will not be calculated at position " + vc.getContig() + ":" + vc.getStart() +
+                    " and possibly subsequent; at least " + MIN_SAMPLES + " samples must have called genotypes");
             return Collections.emptyMap();
         }
         final Pair<Integer, Double> sampleCountCoeff = calculateIC(vc, genotypes);

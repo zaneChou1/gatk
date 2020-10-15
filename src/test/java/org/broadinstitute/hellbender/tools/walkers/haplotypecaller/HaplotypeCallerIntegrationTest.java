@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.tools.walkers.haplotypecaller;
 import com.google.common.collect.ImmutableMap;
 import htsjdk.samtools.SamFiles;
 import htsjdk.samtools.util.FileExtensions;
+import htsjdk.samtools.util.Log;
 import htsjdk.variant.variantcontext.Allele;
 import htsjdk.variant.variantcontext.Genotype;
 import htsjdk.variant.variantcontext.GenotypeBuilder;
@@ -1128,6 +1129,7 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 "-contamination", "1.0",
                 "--" + AssemblyBasedCallerArgumentCollection.EMIT_REF_CONFIDENCE_LONG_NAME, ReferenceConfidenceMode.GVCF.toString(),
                 "--" + AssemblyBasedCallerArgumentCollection.ALLELE_EXTENSION_LONG_NAME, "2",
+                "--" + StandardArgumentDefinitions.VERBOSITY_NAME, Log.LogLevel.WARNING.toString()  //shows DP and SB warnings
         };
         runCommandLine(contaminationArgs);
 
@@ -1312,7 +1314,8 @@ public class HaplotypeCallerIntegrationTest extends CommandLineProgramTest {
                 .addInput(bam)
                 .addReference(b37Reference)
                 .addInterval(interval)
-                .addOutput(output);
+                .addOutput(output)
+                .add(StandardArgumentDefinitions.VERBOSITY_NAME, Log.LogLevel.WARNING); //shows inbreedingCoeff warning
         runCommandLine(args);
 
         Assert.assertTrue(VariantContextTestUtils.streamVcf(output)
