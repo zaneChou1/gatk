@@ -134,7 +134,7 @@ public final class SelectVariants extends VariantWalker {
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
               shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
-              doc="Path to which variants should be written")
+              doc="Path to which variants should be written, or the base path if generating sharded output")
     public GATKPath vcfOutput = null;
 
     /**
