@@ -70,6 +70,7 @@ def run(args: dict,
         default_dtype: torch.dtype = torch.float32):
     log_path = os.path.join(args['output_dir'], args['output_name'] + ".log.txt")
     logging.basicConfig(filename=log_path,
+                        filemode='w',
                         level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
