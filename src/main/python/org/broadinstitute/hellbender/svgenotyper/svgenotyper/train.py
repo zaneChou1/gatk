@@ -65,10 +65,12 @@ def run_training(model: SVGenotyperPyroModel,
 
 
 def run(args: dict,
+        batch_index: int,
         batch_size: int,
         svtype_str: str,
         default_dtype: torch.dtype = torch.float32):
-    log_path = os.path.join(args['output_dir'], args['output_name'] + ".log.txt")
+    base_path = os.path.join(args['output_dir'], "{:s}.{:d}".format(args['output_name'], batch_index))
+    log_path = base_path + ".log.txt"
     logging.basicConfig(filename=log_path,
                         filemode='w',
                         level=logging.INFO,
@@ -109,15 +111,15 @@ def run(args: dict,
         run_training(model=model, data=data, max_iter=args['max_iter'], lr_min=args['lr_min'], lr_init=args['lr_init'],
                      lr_decay=args['lr_decay'], adam_beta1=args['adam_beta1'], adam_beta2=args['adam_beta2'],
                      iter_log_freq=args['iter_log_freq'], jit=args['jit'])
-        save_data(svtype=svtype, model=model, data=data, args=args, vids=data.vids, sample_ids=data.samples)
+        save_data(base_path=base_path, svtype=svtype, model=model, data=data, vids=data.vids, sample_ids=data.samples)
 
 
-def save_data(svtype: SVTypes, model: SVGenotyperPyroModel, data: SVGenotyperData, args: dict, vids: list, sample_ids: list):
-    base_path = os.path.join(args['output_dir'], args['output_name'] + "." + svtype.name)
-    io.save_tensors(data=data, base_path=base_path)
-    io.save_list(data=vids, path=base_path + ".vids.list")
-    io.save_list(data=sample_ids, path=base_path + ".sample_ids.list")
-    save_model(model=model, base_path=base_path)
+def save_data(base_path: str, svtype: SVTypes, model: SVGenotyperPyroModel, data: SVGenotyperData, vids: list, sample_ids: list):
+    data_path = base_path + "." + str(svtype.name)
+    io.save_tensors(data=data, base_path=data_path)
+    io.save_list(data=vids, path=data_path + ".vids.list")
+    io.save_list(data=sample_ids, path=data_path + ".sample_ids.list")
+    save_model(model=model, base_path=data_path)
 
 
 def save_model(model: SVGenotyperPyroModel, base_path: str):
