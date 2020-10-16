@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  */
 @DocumentedFeature(groupName=HelpConstants.DOC_CAT_ANNOTATORS, groupSummary=HelpConstants.DOC_CAT_ANNOTATORS_SUMMARY, summary="Depth of informative coverage for each sample (DP)")
 public final class DepthPerSampleHC extends GenotypeAnnotation implements StandardHCAnnotation, StandardMutectAnnotation {
-    private final transient OneShotLogger logger = new OneShotLogger(DepthPerSampleHC.class);
+    private final transient OneShotLogger oneShotLogger = new OneShotLogger(DepthPerSampleHC.class);
 
     @Override
     public void annotate( final ReferenceContext ref,
@@ -53,7 +53,7 @@ public final class DepthPerSampleHC extends GenotypeAnnotation implements Standa
         Utils.nonNull(gb);
 
         if ( likelihoods == null || !g.isCalled() ) {
-            logger.warn(AnnotationUtils.generateMissingDataWarning(vc, g, likelihoods));
+            oneShotLogger.warn(AnnotationUtils.generateMissingDataWarning(vc, g, likelihoods));
             return;
         }
 
@@ -68,7 +68,7 @@ public final class DepthPerSampleHC extends GenotypeAnnotation implements Standa
 
         // make sure that there's a meaningful relationship between the alleles in the likelihoods and our VariantContext
         if ( !likelihoods.alleles().containsAll(alleles) ) {
-            logger.warn("VC alleles " + alleles + " not a strict subset of AlleleLikelihoods alleles " + likelihoods.alleles());
+            oneShotLogger.warn("VC alleles " + alleles + " not a strict subset of AlleleLikelihoods alleles " + likelihoods.alleles());
             return;
         }
 

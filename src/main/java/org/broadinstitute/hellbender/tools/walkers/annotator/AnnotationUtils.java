@@ -93,14 +93,14 @@ public final class AnnotationUtils {
     }
 
     static String generateMissingDataWarning(final VariantContext vc, final Genotype g, final AlleleLikelihoods<GATKRead, Allele> likelihoods) {
-        final String positionString = "Annotation will not be calculated at position " + vc.getContig() + ":" + vc.getStart() +
-                " and possibly subsequent";
+        final StringBuilder outString = new StringBuilder("Annotation will not be calculated at position " + vc.getContig() + ":" + vc.getStart() +
+                " and possibly subsequent");
         if (!g.isCalled()) {
-            return positionString + "; genotype for sample " + g.getSampleName() + " is not called";
-        } else if (likelihoods == null) {
-            return positionString +  "; alleleLikelihoodMap is null";
-        } else {
-            return positionString;
+            outString.append("; genotype for sample " + g.getSampleName() + " is not called");
         }
+        if (likelihoods == null) {
+            outString.append("; alleleLikelihoodMap is null");
+        }
+        return outString.toString();
     }
 }
