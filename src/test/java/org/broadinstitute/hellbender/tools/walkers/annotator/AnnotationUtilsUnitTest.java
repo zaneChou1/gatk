@@ -2,6 +2,7 @@ package org.broadinstitute.hellbender.tools.walkers.annotator;
 
 import htsjdk.samtools.TextCigarCodec;
 import htsjdk.variant.variantcontext.Allele;
+import org.broadinstitute.hellbender.GATKBaseTest;
 import org.broadinstitute.hellbender.testutils.ArtificialAnnotationUtils;
 import org.broadinstitute.hellbender.testutils.VariantContextTestUtils;
 import org.broadinstitute.hellbender.utils.genotyper.AlleleLikelihoods;
@@ -16,7 +17,7 @@ import java.util.stream.IntStream;
 
 import static org.testng.Assert.*;
 
-public class AnnotationUtilsUnitTest {
+public class AnnotationUtilsUnitTest extends GATKBaseTest {
 
     @Test
     public void testGenerateMissingDataWarning() {

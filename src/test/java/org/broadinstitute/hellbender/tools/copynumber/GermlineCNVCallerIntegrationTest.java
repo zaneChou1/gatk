@@ -58,7 +58,6 @@ public final class GermlineCNVCallerIntegrationTest extends CommandLineProgramTe
                 .add(StandardArgumentDefinitions.OUTPUT_LONG_NAME, OUTPUT_DIR.getAbsolutePath())
                 .add(CopyNumberStandardArgument.OUTPUT_PREFIX_LONG_NAME, "test-germline-cnv-case");
         runCommandLine(argsBuilder);
-        Assert.assertTrue(true);
     }
 
     @Test(groups = {"python"}, expectedExceptions = IllegalArgumentException.class)
