@@ -574,18 +574,7 @@ public final class SelectVariants extends VariantWalker {
         while (!pendingVariants.isEmpty()
                 && (pendingVariants.peek().getStart()<=vc.getStart()
                 || !(pendingVariants.peek().getContig().equals(vc.getContig())))) {
-            if (maxVariantsPerShard == 0) {
-                vcfWriter.add(pendingVariants.poll());
-            } else {
-                variantShardBuffer.add(pendingVariants.poll());
-                if (variantShardBuffer.size() == maxVariantsPerShard) {
-                    variantShardBuffer.forEach(v -> vcfWriter.add(v));
-                    variantShardBuffer.clear();
-                    vcfWriter.close();
-                    currentShardCount++;
-                    initializeVcfWriter();
-                }
-            }
+            flushPendingVariants();
         }
 
         if (fullyDecode) {
@@ -687,9 +676,24 @@ public final class SelectVariants extends VariantWalker {
     @Override
     public Object onTraversalSuccess() {
         while(!pendingVariants.isEmpty()) {
-            vcfWriter.add(pendingVariants.poll());
+            flushPendingVariants();
         }
         return null;
+    }
+
+    private void flushPendingVariants() {
+        if (maxVariantsPerShard == 0) {
+            vcfWriter.add(pendingVariants.poll());
+        } else {
+            variantShardBuffer.add(pendingVariants.poll());
+            if (variantShardBuffer.size() == maxVariantsPerShard) {
+                variantShardBuffer.forEach(v -> vcfWriter.add(v));
+                variantShardBuffer.clear();
+                vcfWriter.close();
+                currentShardCount++;
+                initializeVcfWriter();
+            }
+        }
     }
 
     private VariantContext buildVariantContextWithDroppedAnnotationsRemoved(final VariantContext vc) {

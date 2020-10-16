@@ -10,9 +10,10 @@ import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.FeatureContext;
-import org.broadinstitute.hellbender.engine.MultiplePassVariantWalker;
 import org.broadinstitute.hellbender.engine.ReadsContext;
 import org.broadinstitute.hellbender.engine.ReferenceContext;
+import org.broadinstitute.hellbender.engine.TwoPassVariantWalker;
+import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.python.StreamingPythonScriptExecutor;
 import org.broadinstitute.hellbender.utils.runtime.AsynchronousStreamWriter;
@@ -49,7 +50,7 @@ import java.util.stream.Collectors;
         programGroup = StructuralVariantDiscoveryProgramGroup.class
 )
 
-public class SVTrainGenotyping extends MultiplePassVariantWalker {
+public class SVTrainGenotyping extends TwoPassVariantWalker {
 
     private final static String NL = String.format("%n");
     private static final String DATA_VALUE_SEPARATOR = ";";
@@ -149,7 +150,9 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
     final StreamingPythonScriptExecutor<String> pythonExecutor = new StreamingPythonScriptExecutor<>(true);
 
     private File samplesFile = null;
-    private List<String> batchList = new ArrayList<>();
+    private int numRecords = 0;
+    private List<String> batchList= null;
+    private StructuralVariantType svtype = null;
 
     public static List<StructuralVariantType> SV_TYPES = Lists.newArrayList(
             StructuralVariantType.DEL,
@@ -168,11 +171,6 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
     );
 
     @Override
-    protected int numberOfPasses() {
-        return SV_TYPES.size();
-    }
-
-    @Override
     public void onTraversalStart() {
         samplesFile = createSampleList();
 
@@ -186,33 +184,50 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
     }
 
     @Override
-    protected void nthPassApply(final VariantContext variant,
-                             final ReadsContext readsContext,
-                             final ReferenceContext referenceContext,
-                             final FeatureContext featureContext,
-                             final int n) {
-        final StructuralVariantType svType = variant.getStructuralVariantType();
-        if (svType.equals(SV_TYPES.get(n)) && !isDepthOnly(variant)) {
-            addVariantToBatch(variant);
+    public void firstPassApply(final VariantContext variant,
+                                final ReadsContext readsContext,
+                                final ReferenceContext referenceContext,
+                                final FeatureContext featureContext) {
+        validateRecord(variant);
+        numRecords++;
+    }
+
+    @Override
+    public void afterFirstPass() {
+        batchList = new ArrayList<>(numRecords);
+    }
+
+    private void validateRecord(final VariantContext variant) {
+        if (isDepthOnly(variant)) {
+            throw new UserException.BadInput("Depth-only variant not supported:" + variant.getID());
+        }
+
+        //Expect records to have uniform SVTYPE
+        final StructuralVariantType variantType = variant.getStructuralVariantType();
+        if (svtype == null) {
+            if (!SV_TYPES.contains(variantType)) {
+                final String svTypesString = String.join(",", SV_TYPES.stream().map(StructuralVariantType::name).collect(Collectors.toList()));
+                throw new UserException.BadInput("Unsupported variant type in first record:" + variantType.name() + ". Must be one of: " + svTypesString);
+            } else {
+                svtype = variantType;
+            }
+        } else if (!svtype.equals(variantType)) {
+            throw new UserException.BadInput("Variants must all have the same SVTYPE. First variant was "
+                    + svtype.name() + " but found " + variantType.name() + " for record " + variant.getID());
         }
     }
 
     @Override
-    protected void afterNthPass(final int n) {
-        final int batchSize = batchList.size();
-        if (batchSize > 0) {
-            final String svType = SV_TYPES.get(n).name();
-            final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
-                    batchSize, svType) + NL;
-            logger.info(String.format("Processing batch of %d variants of type %s", batchSize, svType));
-            pythonExecutor.startBatchWrite(pythonCommand, batchList);
-            pythonExecutor.waitForPreviousBatchCompletion();
-            batchList = new ArrayList<>();
-        }
+    public void secondPassApply(final VariantContext variant,
+                                final ReadsContext readsContext,
+                                final ReferenceContext referenceContext,
+                                final FeatureContext featureContext) {
+        addVariantToBatch(variant);
     }
 
     @Override
     public Object onTraversalSuccess() {
+        flushBatch();
         pythonExecutor.terminate();
         return null;
     }
@@ -240,6 +255,17 @@ public class SVTrainGenotyping extends MultiplePassVariantWalker {
         }
         stringBuilder.append("\n");
         batchList.add(stringBuilder.toString());
+    }
+
+    private void flushBatch() {
+        if (!batchList.isEmpty()) {
+            final String svTypeName = svtype.name();
+            final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
+                    numRecords, svTypeName) + NL;
+            logger.info(String.format("Processing batch of %d variants of type %s", numRecords, svTypeName));
+            pythonExecutor.startBatchWrite(pythonCommand, batchList);
+            pythonExecutor.waitForPreviousBatchCompletion();
+        }
     }
 
     private boolean isDepthOnly(final VariantContext variant) {

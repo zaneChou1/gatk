@@ -65,11 +65,10 @@ def run_training(model: SVGenotyperPyroModel,
 
 
 def run(args: dict,
-        batch_index: int,
         batch_size: int,
         svtype_str: str,
         default_dtype: torch.dtype = torch.float32):
-    base_path = os.path.join(args['output_dir'], "{:s}.{:d}".format(args['output_name'], batch_index))
+    base_path = os.path.join(args['output_dir'], args['output_name'])
     log_path = base_path + ".log.txt"
     logging.basicConfig(filename=log_path,
                         filemode='w',
