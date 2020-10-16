@@ -153,7 +153,7 @@ script:
       echo "Running variantstore WDL";
       travis_wait 60 sudo bash scripts/variantstore_cromwell_tests/run_variantstore_wdl.sh;
     else
-      echo "Skipping variantstore tests since google cloud authentication is required."
+      echo "Skipping variantstore tests since google cloud authentication is required.";
     fi;
   elif [[ $TEST_DOCKER == true ]]; then
     echo "Building docker image and running appropriate tests..." ;
