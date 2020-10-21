@@ -170,6 +170,23 @@ def write_vcf(input_vcf_path: str, output_vcf_path: str, output_data: dict, glob
     vcf_out.close()
 
 
+def write_variant_output(output_path: str, output_data: dict):
+    param_keys = ["p_m_pe", "p_m_sr1", "p_m_sr2", "p_m_rd", "eps_pe", "eps_sr1", "eps_sr2",
+                  "phi_pe", "phi_sr1", "phi_sr2", "eta_q", "eta_r"]
+    header = ["vid", "freq_z"] + param_keys
+    with open(output_path, 'w') as f:
+        line = "#" + "\t".join(header)
+        f.write(line + "\n")
+        for vid, dat in output_data.items():
+            z_freq = pretty_print_2d_array(dat['freq_z'])
+            line = "\t".join([vid, z_freq] + [str(dat[x]) for x in param_keys])
+            f.write(line + "\n")
+
+
+def pretty_print_2d_array(arr):
+    return ";".join(",".join(str(y) for y in x) for x in arr.tolist())
+
+
 def save_tensors(data: SVGenotyperData, base_path: str):
     data_vars = vars(data)
     for var in data_vars:
@@ -188,7 +205,10 @@ def load_tensors(directory: str, model_name: str, svtype: SVTypes, device: str =
     sr2_t = torch.load(base_path + ".sr2_t.pt", map_location=device)
     depth_t = torch.load(base_path + ".depth_t.pt", map_location=device)
     rd_gt_prob_t = torch.load(base_path + ".rd_gt_prob_t.pt", map_location=device)
-    return SVGenotyperData(pe_t=pe_t, sr1_t=sr1_t, sr2_t=sr2_t, depth_t=depth_t, rd_gt_prob_t=rd_gt_prob_t)
+    vids = np.loadtxt(base_path + ".vids.list", dtype=str)
+    samples = np.loadtxt(base_path + ".sample_ids.list", dtype=str)
+    return SVGenotyperData(svtype=svtype, vids=vids, samples=samples, pe_t=pe_t, sr1_t=sr1_t, sr2_t=sr2_t,
+                           depth_t=depth_t, rd_gt_prob_t=rd_gt_prob_t)
 
 
 def load_list(path: str):

@@ -11,7 +11,7 @@ from .model import SVGenotyperPyroModel
 from . import io
 
 
-def run(args):
+def run(args, svtype_str: str):
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
@@ -19,43 +19,48 @@ def run(args):
     pyro.distributions.enable_validation(True)
     pyro.clear_param_store()
 
-    np.random.seed(args.random_seed)
-    torch.random.manual_seed(args.random_seed)
-    pyro.set_rng_seed(args.random_seed)
+    np.random.seed(args['random_seed'])
+    torch.random.manual_seed(args['random_seed'])
+    pyro.set_rng_seed(args['random_seed'])
+    svtype = SVTypes[svtype_str]
 
-    output_by_type = {}
-    global_stats_by_type = {}
-    for svtype in [SVTypes.DEL, SVTypes.DUP, SVTypes.INS, SVTypes.INV]:
-        base_path = os.path.join(args.model_dir, args.model_name + "." + svtype.name)
-        params = load_model(base_path)
-        if params is None:
-            logging.info("Skipping SV type {:s}".format(svtype.name))
-        else:
-            model = SVGenotyperPyroModel(svtype=svtype, k=params['k'], mu_eps_pe=params['mu_eps_pe'], mu_eps_sr1=params['mu_eps_sr1'],
-                                         mu_eps_sr2=params['mu_eps_sr2'], mu_lambda_pe=params['mu_lambda_pe'], mu_lambda_sr1=params['mu_lambda_sr1'],
-                                         mu_lambda_sr2=params['mu_lambda_sr2'], var_phi_pe=params['var_phi_pe'], var_phi_sr1=params['var_phi_sr1'],
-                                         var_phi_sr2=params['var_phi_sr2'], mu_eta_q=params['mu_eta_q'], mu_eta_r=params['mu_eta_r'],
-                                         device=args.device, loss=params['loss'])
-            load_param_store(base_path, device=args.device)
-            vids_list = io.load_list(base_path + ".vids.list")
-            sample_ids_list = io.load_list(base_path + ".sample_ids.list")
-            data = io.load_tensors(directory=args.model_dir, model_name=args.model_name, svtype=svtype, device=args.device)
+    base_path = os.path.join(args['model_dir'], args['model_name'] + "." + str(svtype.name))
+    params = load_model(base_path)
+    if params is None:
+        raise RuntimeError("Model at not found: {:s}".format(base_path))
 
-            predictive_samples = model.infer_predictive(data=data, n_samples=args.infer_predictive_samples)
-            discrete_samples = model.infer_discrete(data=data, svtype=svtype, log_freq=args.infer_discrete_log_freq, n_samples=args.infer_discrete_samples)
-            freq = calculate_state_frequencies(model=model, discrete_samples=discrete_samples)
-            genotypes = get_genotypes(freq_z=freq['z'])
-            stats = get_predictive_stats(samples=predictive_samples)
-            stats.update(get_discrete_stats(samples=discrete_samples))
-            output_by_type[svtype] = get_output(vids_list=vids_list, genotypes=genotypes, stats=stats, params=params)
-            global_stats_by_type[svtype] = get_global_stats(stats=stats, model=model)
-    output = {}
-    for svtype in output_by_type:
-        output.update(output_by_type[svtype])
-    return output, global_stats_by_type
+    model = SVGenotyperPyroModel(svtype=svtype, k=params['k'], mu_eps_pe=params['mu_eps_pe'], mu_eps_sr1=params['mu_eps_sr1'],
+                                 mu_eps_sr2=params['mu_eps_sr2'], mu_lambda_pe=params['mu_lambda_pe'], mu_lambda_sr1=params['mu_lambda_sr1'],
+                                 mu_lambda_sr2=params['mu_lambda_sr2'], var_phi_pe=params['var_phi_pe'], var_phi_sr1=params['var_phi_sr1'],
+                                 var_phi_sr2=params['var_phi_sr2'], mu_eta_q=params['mu_eta_q'], mu_eta_r=params['mu_eta_r'],
+                                 device=args['device'], loss=params['loss'])
+    load_param_store(base_path, device=args['device'])
+    vids_list = io.load_list(base_path + ".vids.list")
+    data = io.load_tensors(directory=args['model_dir'], model_name=args['model_name'], svtype=svtype, device=args['device'])
+
+    predictive_samples = model.run_predictive(data=data, n_samples=args['genotype_predictive_samples'])
+    discrete_samples = model.run_discrete(data=data, svtype=svtype, log_freq=args['genotype_discrete_log_freq'], n_samples=args['genotype_discrete_samples'])
+    freq = calculate_state_frequencies(model=model, discrete_samples=discrete_samples)
+    genotypes = get_genotypes(freq_z=freq['z'])
+    stats = get_predictive_stats(samples=predictive_samples)
+    stats.update(get_discrete_stats(samples=discrete_samples))
+
+    output = get_output(vids_list=vids_list, freq_z=freq['z'], stats=stats, params=params)
+    global_stats = get_global_stats(stats=stats, model=model)
+
+    output_path = base_path + ".genotypes.tsv"
+    io.write_variant_output(output_path=output_path, output_data=output)
+
+    return output, global_stats
 
 
-def get_output(vids_list: list, genotypes: dict, stats: dict, params: dict):
+def convert_type(dat):
+    if isinstance(dat, np.ndarray):
+        return dat.tolist()
+    return dat
+
+
+def get_output(vids_list: list, freq_z: dict, stats: dict, params: dict):
     n_variants = len(vids_list)
     output_dict = {}
     for i in range(n_variants):
@@ -73,9 +78,7 @@ def get_output(vids_list: list, genotypes: dict, stats: dict, params: dict):
         else:
             eta_r = 0
         output_dict[vid] = {
-            'gt': genotypes['gt'][i, :],
-            'gt_p': genotypes['gt_p'][i, :],
-            'gt_lod': genotypes['gt_lod'][i, :],
+            'freq_z': freq_z[i, :],
             'p_m_pe': stats['m_pe']['mean'][i],
             'p_m_sr1': stats['m_sr1']['mean'][i],
             'p_m_sr2': stats['m_sr2']['mean'][i],

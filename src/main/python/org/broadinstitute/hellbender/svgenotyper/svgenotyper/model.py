@@ -206,14 +206,14 @@ class SVGenotyperPyroModel(object):
                 pyro.sample('sr1_obs', dist.NegativeBinomial(total_count=r_sr1, probs=p_sr1), obs=data_sr1)
                 pyro.sample('sr2_obs', dist.NegativeBinomial(total_count=r_sr2, probs=p_sr2), obs=data_sr2)
 
-    def infer_predictive(self, data: SVGenotyperData, n_samples: int = 1000):
+    def run_predictive(self, data: SVGenotyperData, n_samples: int = 1000):
         logging.info("Running predictive distribution inference...")
         predictive = Predictive(self.model, guide=self.guide, num_samples=n_samples, return_sites=self.latent_sites)
         sample = predictive(data_pe=data.pe_t, data_sr1=data.sr1_t, data_sr2=data.sr2_t, depth_t=data.depth_t, rd_gt_prob_t=data.rd_gt_prob_t)
         logging.info("Inference complete.")
         return {key: sample[key].detach().cpu().numpy() for key in sample}
 
-    def infer_discrete(self, data: SVGenotyperData, svtype: SVTypes, log_freq: int = 100, n_samples: int = 1000):
+    def run_discrete(self, data: SVGenotyperData, svtype: SVTypes, log_freq: int = 100, n_samples: int = 1000):
         logging.info("Running discrete inference...")
         sites = ['z', 'm_sr1', 'm_sr2']
         if svtype == SVTypes.DEL or svtype == SVTypes.DUP or svtype == SVTypes.INV:
@@ -256,7 +256,7 @@ class SVGenotyperPyroModel(object):
             "m_rd": m_rd
         }
 
-    def infer_discrete_full(self, data: SVGenotyperData, svtype: SVTypes, log_freq: int = 100, n_samples: int = 1000):
+    def run_discrete_full(self, data: SVGenotyperData, svtype: SVTypes, log_freq: int = 100, n_samples: int = 1000):
         logging.info("Running discrete inference...")
         posterior_samples = []
         guide_trace = poutine.trace(self.guide).get_trace(data_pe=data.pe_t, data_sr1=data.sr1_t,

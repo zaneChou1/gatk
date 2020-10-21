@@ -152,7 +152,7 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
     private File samplesFile = null;
     private int numRecords = 0;
     private List<String> batchList= null;
-    private StructuralVariantType svtype = null;
+    private StructuralVariantType svType = null;
 
     public static List<StructuralVariantType> SV_TYPES = Lists.newArrayList(
             StructuralVariantType.DEL,
@@ -204,16 +204,16 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
 
         //Expect records to have uniform SVTYPE
         final StructuralVariantType variantType = variant.getStructuralVariantType();
-        if (svtype == null) {
+        if (svType == null) {
             if (!SV_TYPES.contains(variantType)) {
                 final String svTypesString = String.join(",", SV_TYPES.stream().map(StructuralVariantType::name).collect(Collectors.toList()));
                 throw new UserException.BadInput("Unsupported variant type in first record:" + variantType.name() + ". Must be one of: " + svTypesString);
             } else {
-                svtype = variantType;
+                svType = variantType;
             }
-        } else if (!svtype.equals(variantType)) {
+        } else if (!svType.equals(variantType)) {
             throw new UserException.BadInput("Variants must all have the same SVTYPE. First variant was "
-                    + svtype.name() + " but found " + variantType.name() + " for record " + variant.getID());
+                    + svType.name() + " but found " + variantType.name() + " for record " + variant.getID());
         }
     }
 
@@ -259,7 +259,7 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
 
     private void flushBatch() {
         if (!batchList.isEmpty()) {
-            final String svTypeName = svtype.name();
+            final String svTypeName = svType.name();
             final String pythonCommand = String.format("svgenotyper.train.run(args=args, batch_size=%d, svtype_str='%s')",
                     numRecords, svTypeName) + NL;
             logger.info(String.format("Processing batch of %d variants of type %s", numRecords, svTypeName));
