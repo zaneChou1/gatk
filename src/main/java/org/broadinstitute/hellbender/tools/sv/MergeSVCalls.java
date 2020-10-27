@@ -182,10 +182,6 @@ public final class MergeSVCalls extends GATKTool {
         if (!type.equals(StructuralVariantType.DEL) && !type.equals(StructuralVariantType.DUP)) {
             throw new UserException.BadInput("Unexpected cnMOPS record type: " + type.name());
         }
-        final String sources = tokens[6];
-        if (!sources.equals("cnmops")) {
-            throw new UserException.BadInput("Unexpected cnMOPS record source(s): " + sources);
-        }
         final int length = end - start;
         final boolean isDel = type.equals(StructuralVariantType.DEL);
         final boolean startStrand = isDel;
