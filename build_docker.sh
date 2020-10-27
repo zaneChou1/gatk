@@ -6,7 +6,7 @@ set -e
 REPO=mwalker174
 PROJECT=gatk
 REPO_PRJ=${REPO}/${PROJECT}
-GCR_REPO="us.gcr.io/broad-gatk/gatk"
+GCR_REPO="us.gcr.io/broad-dsde-methods/mwalker/gatk"
 STAGING_CLONE_DIR=${PROJECT}_staging_temp
 
 #################################################
