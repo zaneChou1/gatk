@@ -19,7 +19,9 @@ def plot_sites_per_genome_summary(vcf_path: str, out_path: str):
     for record in vcf.fetch():
         svtype = record.info['SVTYPE']
         for sample in samples_list:
-            if sum(record.samples[sample]['GT']) > 0:
+            if svtype != 'DUP' and sum([x for x in record.samples[sample]['GT'] if x is not None]) > 0:
+                site_counts[sample][svtype] += 1
+            elif svtype == 'DUP' and record.samples[sample]['CN'] > record.samples[sample]['NCN']:
                 site_counts[sample][svtype] += 1
     vcf.close()
 
@@ -210,7 +212,10 @@ def plot_genotype_ternary_diagrams(vcf_path: str, out_path: str):
     samples = vcf.header.samples
     for record in vcf.fetch():
         svtype = record.info['SVTYPE']
-        genotypes[svtype].append([sum(record.samples[sample]['GT']) for sample in samples])
+        if svtype != "DUP":
+            genotypes[svtype].append([sum(record.samples[sample]['GT']) for sample in samples])
+        else:
+            genotypes[svtype].append([record.samples[sample]['CN'] - record.samples[sample]['NCN'] for sample in samples])
         gqs[svtype].append([record.samples[sample]['GQ'] for sample in samples])
     vcf.close()
 

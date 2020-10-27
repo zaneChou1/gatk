@@ -154,12 +154,12 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
     private List<String> batchList= null;
     private StructuralVariantType svType = null;
 
+    // Assumes INV have been converted to BND with SVCluster
     public static List<StructuralVariantType> SV_TYPES = Lists.newArrayList(
             StructuralVariantType.DEL,
             StructuralVariantType.DUP,
             StructuralVariantType.INS,
-            StructuralVariantType.INV
-            //StructuralVariantType.BND  # TODO
+            StructuralVariantType.BND
     );
 
     public static List<String> FORMAT_FIELDS = Lists.newArrayList(

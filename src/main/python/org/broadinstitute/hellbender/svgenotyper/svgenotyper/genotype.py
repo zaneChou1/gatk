@@ -24,7 +24,7 @@ def run(args, svtype_str: str):
     pyro.set_rng_seed(args['random_seed'])
     svtype = SVTypes[svtype_str]
 
-    base_path = os.path.join(args['model_dir'], args['model_name'] + "." + str(svtype.name))
+    base_path = os.path.join(args['model_dir'], args['model_name'])
     params = load_model(base_path)
     if params is None:
         raise RuntimeError("Model at not found: {:s}".format(base_path))
@@ -36,12 +36,12 @@ def run(args, svtype_str: str):
                                  device=args['device'], loss=params['loss'])
     load_param_store(base_path, device=args['device'])
     vids_list = io.load_list(base_path + ".vids.list")
-    data = io.load_tensors(directory=args['model_dir'], model_name=args['model_name'], svtype=svtype, device=args['device'])
+    data = io.load_tensors(base_path=base_path, svtype=svtype, device=args['device'])
 
     predictive_samples = model.run_predictive(data=data, n_samples=args['genotype_predictive_samples'])
     discrete_samples = model.run_discrete(data=data, svtype=svtype, log_freq=args['genotype_discrete_log_freq'], n_samples=args['genotype_discrete_samples'])
     freq = calculate_state_frequencies(model=model, discrete_samples=discrete_samples)
-    genotypes = get_genotypes(freq_z=freq['z'])
+    #genotypes = get_genotypes(freq_z=freq['z'])
     stats = get_predictive_stats(samples=predictive_samples)
     stats.update(get_discrete_stats(samples=discrete_samples))
 

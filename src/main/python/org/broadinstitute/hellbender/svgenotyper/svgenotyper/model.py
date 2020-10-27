@@ -77,7 +77,7 @@ class SVGenotyperPyroModel(object):
         elif svtype == SVTypes.INS:
             self.latent_sites = ['pi_sr1', 'pi_sr2', 'eps_sr1', 'eps_sr2',
                                  'lambda_sr1', 'lambda_sr2', 'phi_sr1', 'phi_sr2']
-        elif svtype == SVTypes.INV:
+        elif svtype == SVTypes.BND:
             self.latent_sites = ['pi_sr1', 'pi_sr2', 'pi_pe', 'eps_pe', 'eps_sr1', 'eps_sr2',
                                  'lambda_pe', 'lambda_sr1', 'lambda_sr2', 'phi_pe', 'phi_sr1', 'phi_sr2']
         else:
@@ -216,7 +216,7 @@ class SVGenotyperPyroModel(object):
     def run_discrete(self, data: SVGenotyperData, svtype: SVTypes, log_freq: int = 100, n_samples: int = 1000):
         logging.info("Running discrete inference...")
         sites = ['z', 'm_sr1', 'm_sr2']
-        if svtype == SVTypes.DEL or svtype == SVTypes.DUP or svtype == SVTypes.INV:
+        if svtype == SVTypes.DEL or svtype == SVTypes.DUP or svtype == SVTypes.BND:
             sites.append('m_pe')
         if svtype == SVTypes.DEL or svtype == SVTypes.DUP:
             sites.append('m_rd')

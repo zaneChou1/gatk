@@ -88,7 +88,7 @@ def run(args: dict,
     svtype = SVTypes[svtype_str]
     if args['num_states'] is not None:
         num_states = args['num_states']
-    elif svtype in [SVTypes.DEL, SVTypes.INS, SVTypes.INV]:
+    elif svtype in [SVTypes.DEL, SVTypes.INS, SVTypes.BND]:
         num_states = 3
     elif svtype == SVTypes.DUP:
         num_states = 5
@@ -110,15 +110,14 @@ def run(args: dict,
         run_training(model=model, data=data, max_iter=args['max_iter'], lr_min=args['lr_min'], lr_init=args['lr_init'],
                      lr_decay=args['lr_decay'], adam_beta1=args['adam_beta1'], adam_beta2=args['adam_beta2'],
                      iter_log_freq=args['iter_log_freq'], jit=args['jit'])
-        save_data(base_path=base_path, svtype=svtype, model=model, data=data, vids=data.vids, sample_ids=data.samples)
+        save_data(base_path=base_path, model=model, data=data, vids=data.vids, sample_ids=data.samples)
 
 
-def save_data(base_path: str, svtype: SVTypes, model: SVGenotyperPyroModel, data: SVGenotyperData, vids: list, sample_ids: list):
-    data_path = base_path + "." + str(svtype.name)
-    io.save_tensors(data=data, base_path=data_path)
-    io.save_list(data=vids, path=data_path + ".vids.list")
-    io.save_list(data=sample_ids, path=data_path + ".sample_ids.list")
-    save_model(model=model, base_path=data_path)
+def save_data(base_path: str, model: SVGenotyperPyroModel, data: SVGenotyperData, vids: list, sample_ids: list):
+    io.save_tensors(data=data, base_path=base_path)
+    io.save_list(data=vids, path=base_path + ".vids.list")
+    io.save_list(data=sample_ids, path=base_path + ".sample_ids.list")
+    save_model(model=model, base_path=base_path)
 
 
 def save_model(model: SVGenotyperPyroModel, base_path: str):

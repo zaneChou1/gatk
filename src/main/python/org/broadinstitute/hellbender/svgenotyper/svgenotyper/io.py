@@ -198,8 +198,7 @@ def save_list(data: list, path: str):
         f.writelines([x + '\n' for x in data])
 
 
-def load_tensors(directory: str, model_name: str, svtype: SVTypes, device: str = 'cpu'):
-    base_path = os.path.join(directory, model_name + "." + svtype.name)
+def load_tensors(base_path: str, svtype: SVTypes, device: str = 'cpu'):
     pe_t = torch.load(base_path + ".pe_t.pt", map_location=device)
     sr1_t = torch.load(base_path + ".sr1_t.pt", map_location=device)
     sr2_t = torch.load(base_path + ".sr2_t.pt", map_location=device)
