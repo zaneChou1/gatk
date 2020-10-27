@@ -16,8 +16,6 @@ import org.broadinstitute.hellbender.engine.*;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.genotyper.AlleleList;
-import org.broadinstitute.hellbender.utils.genotyper.IndexedAlleleList;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.python.StreamingPythonScriptExecutor;
 import org.broadinstitute.hellbender.utils.runtime.AsynchronousStreamWriter;
@@ -252,7 +250,6 @@ public class SVGenotype extends TwoPassVariantWalker {
         final StructuralVariantType svType = variant.getStructuralVariantType();
         final Allele refAllele = Allele.REF_N;
         final Allele altAllele = Allele.create("<" + svType.name() + ">", false);
-        final AlleleList alleleList = new IndexedAlleleList(Lists.newArrayList(refAllele, altAllele));
 
         final int numGenotypes = modelData.getNumGenotypes();
         final int numSamples = sampleList.size();
@@ -317,7 +314,7 @@ public class SVGenotype extends TwoPassVariantWalker {
                 }
                 copyNumber = numRefAlleles;
             } else if (svType.equals(StructuralVariantType.DUP)) {
-                genotypeAlleles = new ArrayList(samplePloidy);
+                genotypeAlleles = new ArrayList<>(samplePloidy);
                 for (int i = 0; i < samplePloidy; i++) {
                     genotypeAlleles.add(Allele.NO_CALL);
                 }
