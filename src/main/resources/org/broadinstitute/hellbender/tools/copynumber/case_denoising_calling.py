@@ -220,7 +220,7 @@ if __name__ == "__main__":
         task.disengage()
     except gcnvkernel.ConvergenceError as err:
         logger.info(err.message)
-        sys.exit(239)
+        sys.exit(239) # Pass an exit code to Java side indicating restart is needed
 
 
     # save calls

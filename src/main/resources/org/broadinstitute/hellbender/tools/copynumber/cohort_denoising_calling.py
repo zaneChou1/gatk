@@ -180,7 +180,7 @@ if __name__ == "__main__":
         warm_up_task.disengage()
     except gcnvkernel.ConvergenceError as err:
         logger.info(err.message)
-        sys.exit(239)
+        sys.exit(239) # Pass an exit code to Java side indicating restart is needed
 
 
     # main task
@@ -194,7 +194,7 @@ if __name__ == "__main__":
         main_task.disengage()
     except gcnvkernel.ConvergenceError as err:
         logger.info(err.message)
-        sys.exit(239)
+        sys.exit(239) # Pass an exit code to Java side indicating restart is needed
 
 
     # save model

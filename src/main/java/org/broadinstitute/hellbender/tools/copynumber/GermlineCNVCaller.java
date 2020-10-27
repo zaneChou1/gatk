@@ -18,7 +18,7 @@ import org.broadinstitute.hellbender.utils.Utils;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 import org.broadinstitute.hellbender.utils.io.Resource;
 import org.broadinstitute.hellbender.utils.python.PythonScriptExecutor;
-import org.broadinstitute.hellbender.utils.runtime.RestartScriptExecutorException;
+import org.broadinstitute.hellbender.utils.runtime.ProcessOutput;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -291,7 +291,8 @@ public final class GermlineCNVCaller extends CommandLineProgram {
     private SimpleIntervalCollection specifiedIntervals;
     private File specifiedIntervalsFile;
 
-    private final int randomGCNVSeed = 1984;
+    private final int randomGCNVSeed = 1984; // Starting gCNV random seed
+    private final int gcnvRestartExitCode = 239; // Default exit code output by gCNV python indicating divergence error
 
     @Override
     protected void onStartup() {
@@ -309,18 +310,30 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         //count files for these intervals to temporary files
         final List<File> intervalSubsetReadCountFiles = writeIntervalSubsetReadCountFiles();
 
+        final String script = (runMode == RunMode.COHORT) ? COHORT_DENOISING_CALLING_PYTHON_SCRIPT : CASE_SAMPLE_CALLING_PYTHON_SCRIPT;
+
         //call python inference code
-        boolean pythonReturnCode;
-        try {
-            pythonReturnCode = executeGermlineCNVCallerPythonScript(intervalSubsetReadCountFiles, randomGCNVSeed);
-        } catch (final RestartScriptExecutorException e) {
-            final Random generator = new Random(randomGCNVSeed);
-            final int nextGCNVSeed = generator.nextInt();
-            logger.info("The inference ran into a NaN error and needs to be restarted");
-            pythonReturnCode = executeGermlineCNVCallerPythonScript(intervalSubsetReadCountFiles, nextGCNVSeed);
+        final PythonScriptExecutor executor = new PythonScriptExecutor(true);
+        ProcessOutput pythonProcessOutput = executor.executeScriptAndGetOutput(
+                new Resource(script, GermlineCNVCaller.class),
+                null,
+                composePythonArguments(intervalSubsetReadCountFiles, randomGCNVSeed));
+        if (pythonProcessOutput.getExitValue() != 0) {
+            // We restart once if the inference diverged
+            if (pythonProcessOutput.getExitValue() == gcnvRestartExitCode) {
+                final Random generator = new Random(randomGCNVSeed);
+                final int nextGCNVSeed = generator.nextInt();
+                logger.info("The inference ran into a NaN error and will be restarted one more time.");
+                pythonProcessOutput = executor.executeScriptAndGetOutput(
+                        new Resource(script, GermlineCNVCaller.class),
+                        null,
+                        composePythonArguments(intervalSubsetReadCountFiles, nextGCNVSeed));
+            } else {
+                throw executor.getScriptException(executor.getExceptionMessageFromScriptError(pythonProcessOutput));
+            }
         }
 
-        if (!pythonReturnCode) {
+        if (pythonProcessOutput.getExitValue() != 0) {
             throw new UserException("Python return code was non-zero.");
         }
 
@@ -409,8 +422,7 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         return intervalSubsetReadCountFiles;
     }
 
-    private boolean executeGermlineCNVCallerPythonScript(final List<File> intervalSubsetReadCountFiles, final int randomSeed) {
-        final PythonScriptExecutor executor = new PythonScriptExecutor(true);
+    private List<String> composePythonArguments(final List<File> intervalSubsetReadCountFiles, final int randomSeed) {
         final String outputDirArg = CopyNumberArgumentValidationUtils.addTrailingSlashIfNecessary(outputDir.getAbsolutePath());
 
         //add required arguments
@@ -425,9 +437,8 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         }
         arguments.add(String.format("--random_seed=%d", randomSeed));
 
-        final String script;
+        // in CASE mode, explicit GC bias modeling is set by the model
         if (runMode == RunMode.COHORT) {
-            script = COHORT_DENOISING_CALLING_PYTHON_SCRIPT;
             //these are the annotated intervals, if provided
             arguments.add("--modeling_interval_list=" + CopyNumberArgumentValidationUtils.getCanonicalPath(specifiedIntervalsFile));
             arguments.add("--output_model_path=" + CopyNumberArgumentValidationUtils.getCanonicalPath(outputDirArg + outputPrefix + MODEL_PATH_SUFFIX));
@@ -436,9 +447,6 @@ public final class GermlineCNVCaller extends CommandLineProgram {
             } else {
                 arguments.add("--enable_explicit_gc_bias_modeling=False");
             }
-        } else {
-            script = CASE_SAMPLE_CALLING_PYTHON_SCRIPT;
-            // in CASE mode, explicit GC bias modeling is set by the model
         }
 
         arguments.add("--read_count_tsv_files");
@@ -448,9 +456,6 @@ public final class GermlineCNVCaller extends CommandLineProgram {
         arguments.addAll(germlineCallingArgumentCollection.generatePythonArguments(runMode));
         arguments.addAll(germlineCNVHybridADVIArgumentCollection.generatePythonArguments());
 
-        return executor.executeScript(
-                new Resource(script, GermlineCNVCaller.class),
-                null,
-                arguments);
+        return arguments;
     }
 }
