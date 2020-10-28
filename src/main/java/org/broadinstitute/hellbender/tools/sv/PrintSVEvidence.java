@@ -2,8 +2,8 @@ package org.broadinstitute.hellbender.tools.sv;
 
 import htsjdk.tribble.Feature;
 import org.broadinstitute.barclay.argparser.Argument;
-import org.broadinstitute.barclay.argparser.BetaFeature;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
@@ -52,7 +52,7 @@ import java.io.PrintStream;
         oneLineSummary = "Prints SV evidence records",
         programGroup = StructuralVariantDiscoveryProgramGroup.class
 )
-@BetaFeature
+@ExperimentalFeature
 @DocumentedFeature
 public final class PrintSVEvidence extends FeatureWalker<Feature> {
 

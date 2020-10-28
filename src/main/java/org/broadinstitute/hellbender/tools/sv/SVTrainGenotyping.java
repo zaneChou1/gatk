@@ -6,6 +6,7 @@ import htsjdk.variant.variantcontext.StructuralVariantType;
 import htsjdk.variant.variantcontext.VariantContext;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.argparser.Hidden;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
  * </pre>
  *
  */
+@ExperimentalFeature
 @DocumentedFeature
 @CommandLineProgramProperties(
         summary = SVTrainGenotyping.USAGE_SUMMARY,

@@ -13,7 +13,8 @@ import java.util.List;
 
 public class SVCallRecordCodec extends AsciiFeatureCodec<SVCallRecord> {
 
-    public static final String FORMAT_SUFFIX = ".tsv.gz";
+    public static final String FORMAT_SUFFIX = ".sv.tsv";
+    public static final String COMPRESSED_FORMAT_SUFFIX = ".sv.tsv.gz";
     public static final String COL_DELIMITER = "\t";
     public static String STRAND_PLUS = "+";
     public static String STRAND_MINUS = "-";
@@ -45,12 +46,12 @@ public class SVCallRecordCodec extends AsciiFeatureCodec<SVCallRecord> {
 
     @Override
     public TabixFormat getTabixFormat() {
-        return TabixFormat.BED;
+        return new TabixFormat(TabixFormat.UCSC_FLAGS, 1, 2, 2, '#', 0);
     }
 
     @Override
     public boolean canDecode(final String path) {
-        return path.endsWith(FORMAT_SUFFIX);
+        return path.toLowerCase().endsWith(FORMAT_SUFFIX) || path.toLowerCase().endsWith(COMPRESSED_FORMAT_SUFFIX);
     }
 
     @Override

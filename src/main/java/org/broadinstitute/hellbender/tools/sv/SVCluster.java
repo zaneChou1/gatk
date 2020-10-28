@@ -9,10 +9,12 @@ import htsjdk.variant.vcf.*;
 import org.apache.commons.io.IOUtils;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.FeatureDataSource;
+import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.spark.sv.utils.GATKSVVCFConstants;
@@ -69,6 +71,7 @@ import java.util.stream.StreamSupport;
         oneLineSummary = "Clusters structural variants",
         programGroup = StructuralVariantDiscoveryProgramGroup.class
 )
+@ExperimentalFeature
 @DocumentedFeature
 public final class SVCluster extends GATKTool {
     public static final String SPLIT_READ_LONG_NAME = "split-reads-file";
@@ -95,11 +98,11 @@ public final class SVCluster extends GATKTool {
     private String sampleCoverageFile;
 
     @Argument(
-            doc = "Input file",
+            doc = "Input SV calls tsv file (compression supported)",
             fullName = StandardArgumentDefinitions.VARIANT_LONG_NAME,
             shortName = StandardArgumentDefinitions.VARIANT_SHORT_NAME
     )
-    private String inputFile;
+    private GATKPath inputFile;
 
     @Argument(
             doc = "Output file",
@@ -142,8 +145,8 @@ public final class SVCluster extends GATKTool {
     public static String SVTYPE_ATTRIBUTE = VCFConstants.SVTYPE;
     public static String STRANDS_ATTRIBUTE = "STRANDS";
     public static String ALGORITHMS_ATTRIBUTE = "ALGORITHMS";
-    public static String START_SPLIT_READ_COUNT_ATTRIBUTE = "SSR";
-    public static String END_SPLIT_READ_COUNT_ATTRIBUTE = "ESR";
+    public static String START_SPLIT_READ_COUNT_ATTRIBUTE = "SR1";
+    public static String END_SPLIT_READ_COUNT_ATTRIBUTE = "SR2";
     public static String DISCORDANT_PAIR_COUNT_ATTRIBUTE = "PE";
 
     public static String DEPTH_ALGORITHM = "depth";
@@ -186,7 +189,7 @@ public final class SVCluster extends GATKTool {
 
     private void initializeReader() {
         reader = new FeatureDataSource<>(
-                inputFile,
+                inputFile.toPath().toString(),
                 "inputFile",
                 INPUT_QUERY_LOOKAHEAD,
                 SVCallRecord.class,

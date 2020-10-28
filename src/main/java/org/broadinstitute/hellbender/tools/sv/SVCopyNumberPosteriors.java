@@ -10,6 +10,7 @@ import htsjdk.variant.vcf.*;
 import org.apache.commons.math3.util.FastMath;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.CoverageAnalysisProgramGroup;
@@ -76,6 +77,7 @@ import java.util.stream.IntStream;
         oneLineSummary = "Collects read counts at specified intervals",
         programGroup = CoverageAnalysisProgramGroup.class
 )
+@ExperimentalFeature
 @DocumentedFeature
 public final class SVCopyNumberPosteriors extends VariantWalker {
     public static final String COPY_NUMBER_INTERVALS_LONG_NAME = "cnv-intervals-vcf";

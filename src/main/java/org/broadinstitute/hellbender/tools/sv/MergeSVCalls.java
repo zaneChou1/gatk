@@ -1,16 +1,22 @@
 package org.broadinstitute.hellbender.tools.sv;
 
 import htsjdk.samtools.SAMSequenceDictionary;
+import htsjdk.samtools.util.IOUtil;
+import htsjdk.tribble.Tribble;
+import htsjdk.tribble.index.Index;
+import htsjdk.tribble.index.IndexFactory;
 import htsjdk.variant.variantcontext.StructuralVariantType;
 import htsjdk.variant.variantcontext.VariantContext;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import org.broadinstitute.barclay.argparser.Argument;
 import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
+import org.broadinstitute.barclay.argparser.ExperimentalFeature;
 import org.broadinstitute.barclay.help.DocumentedFeature;
 import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
 import org.broadinstitute.hellbender.cmdline.programgroups.StructuralVariantDiscoveryProgramGroup;
 import org.broadinstitute.hellbender.engine.FeatureDataSource;
+import org.broadinstitute.hellbender.engine.GATKPath;
 import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
@@ -20,9 +26,9 @@ import org.broadinstitute.hellbender.utils.codecs.SVCallRecordCodec;
 import org.broadinstitute.hellbender.utils.io.IOUtils;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -73,6 +79,7 @@ import java.util.stream.StreamSupport;
         oneLineSummary = "Creates sparse structural variants file",
         programGroup = StructuralVariantDiscoveryProgramGroup.class
 )
+@ExperimentalFeature
 @DocumentedFeature
 public final class MergeSVCalls extends GATKTool {
     public static final String MIN_GCNV_QUALITY_LONG_NAME = "min-gcnv-quality";
@@ -81,6 +88,8 @@ public final class MergeSVCalls extends GATKTool {
     public static final String SMALL_CNV_OUTPUT_LONG_NAME = "small-cnv-output";
     public static final String IGNORE_DICTIONARY_LONG_NAME = "ignore-dict";
     public static final String CNMOPS_INPUT_LONG_NAME = "cnmops";
+    public static final String COMPRESSION_LEVEL_LONG_NAME = "compression-level";
+    public static final String CREATE_INDEX_LONG_NAME = "create-index";
 
     public static final int DEFAULT_SMALL_CNV_SIZE = 5000;
     public static final int DEFAULT_SMALL_CNV_PADDING = 1000;
@@ -99,11 +108,15 @@ public final class MergeSVCalls extends GATKTool {
     private List<String> cnmopsFiles;
 
     @Argument(
-            doc = "Output TSV file",
+            doc = "Output file ending in \"" + SVCallRecordCodec.FORMAT_SUFFIX + "\" or \"" + SVCallRecordCodec.COMPRESSED_FORMAT_SUFFIX + "\"",
             fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME
     )
-    private File outputFile;
+    private GATKPath outputFile;
+
+    @Argument(fullName=CREATE_INDEX_LONG_NAME,
+            doc = "If true, create a index when writing output file", optional=true, common = true)
+    public boolean createOutputIndex = true;
 
     @Argument(
             doc = "Skip VCF sequence dictionary check",
@@ -121,9 +134,15 @@ public final class MergeSVCalls extends GATKTool {
     )
     private int minGCNVQuality = 60;
 
+    @Argument(
+            doc = "Compression level for gzipped output",
+            fullName = COMPRESSION_LEVEL_LONG_NAME
+    )
+    private int compressionLevel = 6;
+
     private List<SVCallRecord> records;
     private SAMSequenceDictionary dictionary;
-
+    private static final SVCallRecordCodec CALL_RECORD_CODEC = new SVCallRecordCodec();
 
     @Override
     public void onTraversalStart() {
@@ -138,6 +157,9 @@ public final class MergeSVCalls extends GATKTool {
     public Object onTraversalSuccess() {
         records.sort(IntervalUtils.getDictionaryOrderComparator(dictionary));
         writeVariants();
+        if (createOutputIndex) {
+            writeIndex();
+        }
         return null;
     }
 
@@ -228,11 +250,31 @@ public final class MergeSVCalls extends GATKTool {
     }
 
     private void writeVariants() {
-        final SVCallRecordCodec callRecordCodec = new SVCallRecordCodec();
-        try (final PrintStream writer = new PrintStream(outputFile)) {
-            records.stream().forEachOrdered(r -> writer.println(callRecordCodec.encode(r)));
+        try (final PrintStream writer =  IOUtils.makePrintStreamMaybeBlockGzipped(outputFile.toPath().toFile(), compressionLevel)) {
+            for (final SVCallRecord record : records) {
+                writer.println(CALL_RECORD_CODEC.encode(record));
+            }
         } catch(final IOException e) {
             throw new GATKException("Error writing output file", e);
+        }
+    }
+
+    private void writeIndex() {
+        final Path outPath = outputFile.toPath();
+        try {
+            final Index index;
+            final Path indexPath;
+            if (IOUtil.hasBlockCompressedExtension(outPath)) {
+                index = IndexFactory.createIndex(outPath, CALL_RECORD_CODEC, IndexFactory.IndexType.TABIX, dictionary);
+                indexPath = Tribble.tabixIndexPath(outPath);
+            } else {
+                // Optimize indices for other kinds of files for seek time / querying
+                index = IndexFactory.createDynamicIndex(outPath, CALL_RECORD_CODEC, IndexFactory.IndexBalanceApproach.FOR_SEEK_TIME);
+                indexPath = Tribble.indexPath(outPath);
+            }
+            index.write(indexPath);
+        } catch (final IOException e) {
+            throw new UserException.CouldNotIndexFile(outputFile.toPath(), e);
         }
     }
 }
