@@ -6,6 +6,9 @@ MAX_PE_COUNT = 50
 MAX_SR_COUNT = 50
 MAX_GT_LOD = 99
 
+# Ploidy of mean depth table input
+DEPTH_PLOIDY = 2
+
 
 class SVTypes(Enum):
     DEL = 0
