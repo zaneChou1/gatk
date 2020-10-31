@@ -45,8 +45,10 @@ dependencies:
 - biopython=1.76
 - pyvcf=0.6.8
 - bioconda::pysam=0.15.3            # using older conda-installed versions may result in libcrypto / openssl bugs
+- pytorch==1.6.0
+- cudatoolkit=10.2
 
 # pip installs should be avoided, as pip may not respect the dependencies found by the conda solver
 - pip:
   - gatkPythonPackageArchive.zip
-  - pyro-ppl
+  - pyro-ppl=1.5.0

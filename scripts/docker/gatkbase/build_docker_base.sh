@@ -6,7 +6,7 @@ set -e
 
 REPO=mwalker174
 PROJECT=gatk
-VERSION=2.2.0-cuda-9.2
+VERSION=2.2.0-cuda-10.2
 FULL_PATH=${REPO}/${PROJECT}:gatkbase-${VERSION}
 
 #################################################
