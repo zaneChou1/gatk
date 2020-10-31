@@ -17,6 +17,8 @@ import java.util.stream.Collectors;
 
 public class SVCallRecord implements Feature {
 
+    //TODO: incorporate END2 position
+
     private final String startContig;
     private final int start;
     private final boolean startStrand;

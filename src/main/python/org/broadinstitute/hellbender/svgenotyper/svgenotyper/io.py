@@ -85,10 +85,11 @@ def load_data(batch_size: int,
               svtype: SVTypes,
               num_states: int,
               depth_dilution_factor: float,
+              tensor_dtype: torch.dtype,
               device: str = 'cpu'):
     # TODO: cross-check depth table samples with samples list
     mean_count_df = pd.read_csv(mean_coverage_path, sep='\t', header=None, index_col=0)
-    mean_count_t = torch.from_numpy(mean_count_df.values).to(device=device).squeeze(-1) / float(constants.DEPTH_PLOIDY)
+    mean_count_t = torch.from_numpy(mean_count_df.values).to(device=device, dtype=tensor_dtype).squeeze(-1) / torch.tensor(constants.DEPTH_PLOIDY).to(device=device, dtype=tensor_dtype)
     samples_np = np.loadtxt(samples_path, dtype=str)
     vids_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t = load_batch(batch_size=batch_size, device=device)
     if vids_np.shape[0] == 0:

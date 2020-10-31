@@ -134,7 +134,7 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
     private int maxIter = 2000;
 
     @Argument(fullName = "iter-log-freq", doc ="Number of iterations between log messages", optional = true)
-    private int iterLogFreq = 100;
+    private int iterLogFreq = 50;
 
     @Argument(fullName = "jit", doc = "Enable JIT compilation", optional = true)
     private boolean enableJit = false;
@@ -182,7 +182,9 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
 
         // Execute Python code to initialize training
         pythonExecutor.sendSynchronousCommand("import svgenotyper" + NL);
-        pythonExecutor.sendSynchronousCommand("args = " + generatePythonArgumentsDictionary() + NL);
+        final String argsCommand = "args = " + generatePythonArgumentsDictionary();
+        pythonExecutor.sendSynchronousCommand(argsCommand + NL);
+        logger.debug(argsCommand);
     }
 
     @Override

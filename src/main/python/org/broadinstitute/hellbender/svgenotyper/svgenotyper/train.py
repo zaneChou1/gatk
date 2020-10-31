@@ -102,7 +102,7 @@ def run(args: dict,
                                  device=args['device'])
     data = io.load_data(batch_size=batch_size, mean_coverage_path=args['coverage_file'], samples_path=args['samples_file'],
                         svtype=svtype, num_states=model.k, depth_dilution_factor=args['depth_dilution_factor'],
-                        device=args['device'])
+                        tensor_dtype=default_dtype, device=args['device'])
     if data is None:
         logging.info("No records of type {:s} found.".format(str(svtype.name)))
     else:
