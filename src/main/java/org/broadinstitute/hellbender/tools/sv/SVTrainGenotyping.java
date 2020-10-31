@@ -257,7 +257,7 @@ public class SVTrainGenotyping extends TwoPassVariantWalker {
             stringBuilder.append(stringBuilderMap.get(attribute).toString() + separator);
             attributeIndex++;
         }
-        stringBuilder.append("\n");
+        stringBuilder.append(NL);
         batchList.add(stringBuilder.toString());
     }
 
