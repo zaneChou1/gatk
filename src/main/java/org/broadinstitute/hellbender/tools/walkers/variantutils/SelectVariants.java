@@ -1,7 +1,6 @@
 package org.broadinstitute.hellbender.tools.walkers.variantutils;
 
 import htsjdk.samtools.SAMSequenceDictionary;
-import htsjdk.samtools.util.FileExtensions;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.variantcontext.writer.VariantContextWriter;
 import htsjdk.variant.vcf.*;
@@ -16,7 +15,6 @@ import org.broadinstitute.hellbender.engine.filters.CountingVariantFilter;
 import org.broadinstitute.hellbender.engine.filters.VariantFilterLibrary;
 import org.broadinstitute.hellbender.engine.filters.VariantIDsVariantFilter;
 import org.broadinstitute.hellbender.engine.filters.VariantTypesVariantFilter;
-import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
 import org.broadinstitute.hellbender.tools.genomicsdb.GenomicsDBArgumentCollection;
 import org.broadinstitute.hellbender.tools.genomicsdb.GenomicsDBOptions;
@@ -36,7 +34,6 @@ import picard.cmdline.programgroups.VariantManipulationProgramGroup;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -134,7 +131,7 @@ public final class SelectVariants extends VariantWalker {
 
     @Argument(fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
               shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME,
-              doc="Path to which variants should be written, or the base path if generating sharded output")
+              doc="Path to which variants should be written")
     public GATKPath vcfOutput = null;
 
     /**
@@ -408,13 +405,6 @@ public final class SelectVariants extends VariantWalker {
     @Argument(fullName = "drop-genotype-annotation", shortName = "DGA", optional = true, doc = "Genotype annotations to drop from output vcf.  Annotations to be dropped are specified by their key.")
     private List<String> genotypeAnnotationsToDrop = new ArrayList<>();
 
-    /**
-     * Max variants per shard (0 to disable)
-     */
-    @Argument(fullName = "max-variants-per-shard", optional = true, minValue = 0,
-            doc = "If non-zero, divides output into shards each with no greater than the given number of variants")
-    private int maxVariantsPerShard = 0;
-
     @Hidden
     @Argument(fullName="allow-nonoverlapping-command-line-samples", optional=true,
                     doc="Allow samples other than those in the VCF to be specified on the command line. These samples will be ignored.")
@@ -459,11 +449,6 @@ public final class SelectVariants extends VariantWalker {
 
     private final Map<Integer, Integer> ploidyToNumberOfAlleles = new LinkedHashMap<Integer, Integer>();
 
-    private Set<VCFHeaderLine> headerLines = null;
-
-    private int shardIndex = 0;
-    private int currentShardCount = 0;
-
     @Override
     protected GenomicsDBOptions getGenomicsDBOptions() {
         if (genomicsDBOptions == null) {
@@ -473,7 +458,6 @@ public final class SelectVariants extends VariantWalker {
     }
 
     final private PriorityQueue<VariantContext> pendingVariants = new PriorityQueue<>(Comparator.comparingInt(VariantContext::getStart));
-    final private List<VariantContext> variantShardBuffer = new ArrayList<>(maxVariantsPerShard);
 
     /**
      * Set up the VCF writer, the sample expressions and regexs, filters inputs, and the JEXL matcher
@@ -522,19 +506,20 @@ public final class SelectVariants extends VariantWalker {
         //TODO: this should be refactored/consolidated as part of
         // https://github.com/broadinstitute/gatk/issues/121 and
         // https://github.com/broadinstitute/gatk/issues/1116
+        Set<VCFHeaderLine> actualLines = null;
         SAMSequenceDictionary sequenceDictionary = null;
         if (hasReference()) {
             Path refPath = referenceArguments.getReferencePath();
             sequenceDictionary= this.getReferenceDictionary();
-            this.headerLines = VcfUtils.updateHeaderContigLines(headerLines, refPath, sequenceDictionary, suppressReferencePath);
+            actualLines = VcfUtils.updateHeaderContigLines(headerLines, refPath, sequenceDictionary, suppressReferencePath);
         }
         else {
             sequenceDictionary = getHeaderForVariants().getSequenceDictionary();
             if (null != sequenceDictionary) {
-                this.headerLines = VcfUtils.updateHeaderContigLines(headerLines, null, sequenceDictionary, suppressReferencePath);
+                actualLines = VcfUtils.updateHeaderContigLines(headerLines, null, sequenceDictionary, suppressReferencePath);
             }
             else {
-                this.headerLines = headerLines;
+                actualLines = headerLines;
             }
         }
         if (!infoAnnotationsToDrop.isEmpty()) {
@@ -547,21 +532,10 @@ public final class SelectVariants extends VariantWalker {
                 logger.info(String.format("Will drop genotype annotation: %s",genotypeAnnotation));
             }
         }
-        initializeVcfWriter();
-    }
 
-    private void initializeVcfWriter() {
-        if (maxVariantsPerShard == 0 && vcfWriter != null) {
-            throw new GATKException.ShouldNeverReachHereException("Attempted to reinitialize VCF writer in non-sharding mode");
-        }
-        final Path outPath = maxVariantsPerShard == 0 ? vcfOutput.toPath() : getCurrentVcfShardPath();
+        final Path outPath = vcfOutput.toPath();
         vcfWriter = createVCFWriter(outPath);
-        vcfWriter.writeHeader(new VCFHeader(headerLines, samples));
-
-    }
-
-    private Path getCurrentVcfShardPath() {
-        return Paths.get(vcfOutput.toPath().toAbsolutePath() + ".shard_" + currentShardCount + FileExtensions.COMPRESSED_VCF);
+        vcfWriter.writeHeader(new VCFHeader(actualLines, samples));
     }
 
     @Override
@@ -571,10 +545,8 @@ public final class SelectVariants extends VariantWalker {
         since variant starts will only be moved further right, we can write out a pending variant if the current variant start is after the pending variant start
         variant record locations can move to the right due to allele trimming if preserveAlleles is false
          */
-        while (!pendingVariants.isEmpty()
-                && (pendingVariants.peek().getStart()<=vc.getStart()
-                || !(pendingVariants.peek().getContig().equals(vc.getContig())))) {
-            flushPendingVariants();
+        while (!pendingVariants.isEmpty() && (pendingVariants.peek().getStart()<=vc.getStart() || !(pendingVariants.peek().getContig().equals(vc.getContig())))) {
+            vcfWriter.add(pendingVariants.poll());
         }
 
         if (fullyDecode) {
@@ -676,24 +648,9 @@ public final class SelectVariants extends VariantWalker {
     @Override
     public Object onTraversalSuccess() {
         while(!pendingVariants.isEmpty()) {
-            flushPendingVariants();
+            vcfWriter.add(pendingVariants.poll());
         }
         return null;
-    }
-
-    private void flushPendingVariants() {
-        if (maxVariantsPerShard == 0) {
-            vcfWriter.add(pendingVariants.poll());
-        } else {
-            variantShardBuffer.add(pendingVariants.poll());
-            if (variantShardBuffer.size() == maxVariantsPerShard) {
-                variantShardBuffer.forEach(v -> vcfWriter.add(v));
-                variantShardBuffer.clear();
-                vcfWriter.close();
-                currentShardCount++;
-                initializeVcfWriter();
-            }
-        }
     }
 
     private VariantContext buildVariantContextWithDroppedAnnotationsRemoved(final VariantContext vc) {
