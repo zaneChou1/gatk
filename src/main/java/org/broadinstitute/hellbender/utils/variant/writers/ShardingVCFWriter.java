@@ -54,7 +54,7 @@ public class ShardingVCFWriter implements VariantContextWriter {
         if (header == null) {
             throw new GATKException("Attempted to create new shard before header has been set");
         }
-        writer.setHeader(header);
+        writer.writeHeader(header);
     }
 
     private VariantContextWriter createNewWriter() {
