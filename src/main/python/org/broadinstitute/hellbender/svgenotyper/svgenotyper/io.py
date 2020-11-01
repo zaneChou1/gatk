@@ -54,7 +54,8 @@ def read_vcf(vcf_path: str, svtype: SVTypes):
 
 
 def load_batch(batch_size: int,
-               device: str):
+               device: str,
+               tensor_dtype: torch.dtype):
     vid_list = []
     pe_list = []
     sr1_list = []
@@ -71,11 +72,11 @@ def load_batch(batch_size: int,
         ncn_list.append([int(x) for x in fifo_data[4].split(';')])
         cnlp_list.append([[int(y) for y in x.split(',')] for x in fifo_data[5].split(';')])
     vid_np = np.asarray(vid_list)
-    pe_t = torch.tensor(pe_list, device=device)
-    sr1_t = torch.tensor(sr1_list, device=device)
-    sr2_t = torch.tensor(sr2_list, device=device)
-    ncn_t = torch.tensor(ncn_list, device=device)
-    cnlp_t = torch.tensor(cnlp_list, device=device)
+    pe_t = torch.tensor(pe_list, device=device, dtype=tensor_dtype)
+    sr1_t = torch.tensor(sr1_list, device=device, dtype=tensor_dtype)
+    sr2_t = torch.tensor(sr2_list, device=device, dtype=tensor_dtype)
+    ncn_t = torch.tensor(ncn_list, device=device, dtype=tensor_dtype)
+    cnlp_t = torch.tensor(cnlp_list, device=device, dtype=tensor_dtype)
     return vid_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t
 
 
@@ -91,13 +92,13 @@ def load_data(batch_size: int,
     mean_count_df = pd.read_csv(mean_coverage_path, sep='\t', header=None, index_col=0)
     mean_count_t = torch.from_numpy(mean_count_df.values).to(device=device, dtype=tensor_dtype).squeeze(-1) / torch.tensor(constants.DEPTH_PLOIDY).to(device=device, dtype=tensor_dtype)
     samples_np = np.loadtxt(samples_path, dtype=str)
-    vids_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t = load_batch(batch_size=batch_size, device=device)
+    vids_np, pe_t, sr1_t, sr2_t, ncn_t, cnlp_t = load_batch(batch_size=batch_size, device=device, tensor_dtype=tensor_dtype)
     if vids_np.shape[0] == 0:
         return None
 
     pe_t, sr1_t, sr2_t, depth_t, rd_gt_prob_t = compute_preprocessed_tensors(num_states, svtype, depth_dilution_factor,
                                                                              pe_t, sr1_t, sr2_t, mean_count_t, cnlp_t,
-                                                                             ncn_t, device)
+                                                                             ncn_t, device, tensor_dtype=tensor_dtype)
     return SVGenotyperData(svtype, vids_np, samples_np, pe_t, sr1_t, sr2_t, depth_t, rd_gt_prob_t)
 
 
@@ -199,12 +200,12 @@ def save_list(data: list, path: str):
         f.writelines([x + '\n' for x in data])
 
 
-def load_tensors(base_path: str, svtype: SVTypes, device: str = 'cpu'):
-    pe_t = torch.load(base_path + ".pe_t.pt", map_location=device)
-    sr1_t = torch.load(base_path + ".sr1_t.pt", map_location=device)
-    sr2_t = torch.load(base_path + ".sr2_t.pt", map_location=device)
-    depth_t = torch.load(base_path + ".depth_t.pt", map_location=device)
-    rd_gt_prob_t = torch.load(base_path + ".rd_gt_prob_t.pt", map_location=device)
+def load_tensors(base_path: str, svtype: SVTypes, tensor_dtype: torch.dtype, device: str = 'cpu'):
+    pe_t = torch.load(base_path + ".pe_t.pt", map_location=device).to(dtype=tensor_dtype)
+    sr1_t = torch.load(base_path + ".sr1_t.pt", map_location=device).to(dtype=tensor_dtype)
+    sr2_t = torch.load(base_path + ".sr2_t.pt", map_location=device).to(dtype=tensor_dtype)
+    depth_t = torch.load(base_path + ".depth_t.pt", map_location=device).to(dtype=tensor_dtype)
+    rd_gt_prob_t = torch.load(base_path + ".rd_gt_prob_t.pt", map_location=device).to(dtype=tensor_dtype)
     vids = np.loadtxt(base_path + ".vids.list", dtype=str)
     samples = np.loadtxt(base_path + ".sample_ids.list", dtype=str)
     return SVGenotyperData(svtype=svtype, vids=vids, samples=samples, pe_t=pe_t, sr1_t=sr1_t, sr2_t=sr2_t,

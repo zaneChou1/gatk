@@ -78,6 +78,7 @@ public final class SVCluster extends GATKTool {
     public static final String DISCORDANT_PAIRS_LONG_NAME = "discordant-pairs-file";
     public static final String SAMPLE_COVERAGE_LONG_NAME = "sample-coverage";
     public static final String MIN_SIZE_LONG_NAME = "min-size";
+    public static final String DEPTH_ONLY_INCLUDE_INTERVAL_OVERLAP_LONG_NAME = "depth-include-overlap";
 
     @Argument(
             doc = "Split reads file",
@@ -119,6 +120,15 @@ public final class SVCluster extends GATKTool {
             optional = true
     )
     private int minEventSize = 50;
+
+    @Argument(
+            doc = "Depth-only call min included intervals overlap",
+            fullName = DEPTH_ONLY_INCLUDE_INTERVAL_OVERLAP_LONG_NAME,
+            minValue = 0,
+            maxValue = 1,
+            optional = true
+    )
+    private double minDepthOnlyIncludeOverlap = 0.5;
 
     private SAMSequenceDictionary dictionary;
 
@@ -242,7 +252,7 @@ public final class SVCluster extends GATKTool {
     public void traverse() {
         StreamSupport.stream(Spliterators.spliteratorUnknownSize(reader.iterator(), Spliterator.ORDERED), false)
                 .filter(call -> isValidSize(call, minEventSize))
-                .filter(call -> isWhitelisted(call, whitelistedIntervalTreeMap))
+                .filter(call -> isWhitelisted(call, whitelistedIntervalTreeMap, minDepthOnlyIncludeOverlap))
                 .forEachOrdered(this::processRecord);
         if (!defragmenter.isEmpty()) {
             processClusters();
@@ -381,15 +391,49 @@ public final class SVCluster extends GATKTool {
         return call.getType().equals(StructuralVariantType.BND) || call.getLength() >= minEventSize;
     }
 
-    public static <T> boolean isWhitelisted(final SVCallRecord call, final Map<String,IntervalTree<T>> whitelistedIntervalTreeMap) {
+    public static <T> boolean isWhitelisted(final SVCallRecord call, final Map<String,IntervalTree<T>> whitelistedIntervalTreeMap,
+                                            final double minDepthOnlyIncludeOverlap) {
+        if (SVDepthOnlyCallDefragmenter.isDepthOnlyCall(call)) {
+            return isWhitelistedDepthOnly(call, whitelistedIntervalTreeMap, minDepthOnlyIncludeOverlap);
+        }
+        return isWhitelistedNonDepthOnly(call, whitelistedIntervalTreeMap);
+    }
+
+    private static <T> boolean isWhitelistedNonDepthOnly(final SVCallRecord call, final Map<String,IntervalTree<T>> whitelistedIntervalTreeMap) {
         final IntervalTree<T> startTree = whitelistedIntervalTreeMap.get(call.getContig());
-        if (startTree == null || !startTree.overlappers(call.getStart(), call.getStart() + 1).hasNext()) {
+        if (startTree == null) {
             return false;
         }
         final IntervalTree<T> endTree = whitelistedIntervalTreeMap.get(call.getEndContig());
-        if (endTree == null || !endTree.overlappers(call.getEnd(), call.getEnd() + 1).hasNext()) {
+        if (endTree == null) {
             return false;
         }
-        return true;
+        return startTree.overlappers(call.getStart(), call.getStart() + 1).hasNext()
+                && endTree.overlappers(call.getEnd(), call.getEnd() + 1).hasNext();
+    }
+
+    private static <T> boolean isWhitelistedDepthOnly(final SVCallRecord call, final Map<String,IntervalTree<T>> whitelistedIntervalTreeMap,
+                                               final double minDepthOnlyIncludeOverlap) {
+        final IntervalTree<T> tree = whitelistedIntervalTreeMap.get(call.getContig());
+        if (tree == null) {
+            return false;
+        }
+        final long overlap = totalOverlap(call.getStart(), call.getEnd(), tree);
+        final double overlapFraction = overlap / (double) call.getLength();
+        return overlapFraction >= minDepthOnlyIncludeOverlap;
+    }
+
+    private static <T> long totalOverlap(final int start, final int end, final IntervalTree<T> tree) {
+        final Iterator<IntervalTree.Node<T>> iter = tree.overlappers(start, end);
+        long overlap = 0;
+        while (iter.hasNext()) {
+            final IntervalTree.Node<T> node = iter.next();
+            overlap += intersectionLength(start, end, node.getStart(), node.getEnd());
+        }
+        return overlap;
+    }
+
+    private static long intersectionLength(final int start1, final int end1, final int start2, final int end2) {
+        return Math.max(0, Math.min(end1, end2) - Math.max(start1, start2) + 1);
     }
 }

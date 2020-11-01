@@ -79,8 +79,6 @@ def run(args: dict,
     pyro.distributions.enable_validation(True)
     pyro.clear_param_store()
 
-    torch.set_default_dtype(default_dtype)
-
     np.random.seed(args['random_seed'])
     torch.random.manual_seed(args['random_seed'])
     pyro.set_rng_seed(args['random_seed'])
@@ -95,7 +93,7 @@ def run(args: dict,
     else:
         raise ValueError('SV type {:s} not supported for genotyping.'.format(str(svtype.name)))
 
-    model = SVGenotyperPyroModel(svtype=svtype, k=num_states, mu_eps_pe=args['eps_pe'], mu_eps_sr1=args['eps_sr1'],
+    model = SVGenotyperPyroModel(svtype=svtype, k=num_states, tensor_dtype=default_dtype, mu_eps_pe=args['eps_pe'], mu_eps_sr1=args['eps_sr1'],
                                  mu_eps_sr2=args['eps_sr2'], mu_lambda_pe=args['lambda_pe'], mu_lambda_sr1=args['lambda_sr1'],
                                  mu_lambda_sr2=args['lambda_sr2'], var_phi_pe=args['phi_pe'], var_phi_sr1=args['phi_sr1'],
                                  var_phi_sr2=args['phi_sr2'], mu_eta_q=args['eta_q'], mu_eta_r=args['eta_r'],

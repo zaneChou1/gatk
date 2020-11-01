@@ -36,6 +36,7 @@ class SVGenotyperPyroModel(object):
     def __init__(self,
                  svtype: SVTypes,
                  k: int,
+                 tensor_dtype: torch.dtype,
                  mu_eps_pe: float = 0.1,
                  mu_eps_sr1: float = 0.1,
                  mu_eps_sr2: float = 0.1,
@@ -50,6 +51,7 @@ class SVGenotyperPyroModel(object):
                  device: str = 'cpu',
                  loss: dict = None):
         self.k = k
+        self.tensor_dtype = tensor_dtype
         self.mu_eps_pe = mu_eps_pe
         self.mu_eps_sr1 = mu_eps_sr1
         self.mu_eps_sr2 = mu_eps_sr2
@@ -103,9 +105,9 @@ class SVGenotyperPyroModel(object):
 
         n_variants = data_pe.shape[0]
         n_samples = data_pe.shape[1]
-        zero_t = torch.zeros(1, device=self.device)
-        one_t = torch.ones(1, device=self.device)
-        k_range_t = torch.arange(0, self.k).to(dtype=torch.get_default_dtype(), device=self.device)
+        zero_t = torch.zeros(1, device=self.device, dtype=self.tensor_dtype)
+        one_t = torch.ones(1, device=self.device, dtype=self.tensor_dtype)
+        k_range_t = torch.arange(0, self.k).to(dtype=self.tensor_dtype, device=self.device)
 
         pi_sr1 = pyro.sample('pi_sr1', dist.Beta(one_t, one_t))
         pi_sr2 = pyro.sample('pi_sr2', dist.Beta(one_t, one_t))
@@ -300,7 +302,7 @@ class SVGenotyperPyroModel(object):
         samples_sr2 = []
         for i in range(n_samples):
             if svtype == SVTypes.INS:
-                samples_pe.append(torch.zeros(1, device='cpu').unsqueeze(-1).expand(r_pe.shape[0], r_pe.shape[1]))
+                samples_pe.append(torch.zeros(1, device='cpu', dtype=self.tensor_dtype).unsqueeze(-1).expand(r_pe.shape[0], r_pe.shape[1]))
             else:
                 samples_pe.append(dist.NegativeBinomial(total_count=r_pe[i, ...], probs=p_pe[i, ...]).sample().detach())
             samples_sr1.append(dist.NegativeBinomial(total_count=r_sr1[i, ...], probs=p_sr1[i, ...]).sample().detach())

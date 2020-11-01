@@ -15,12 +15,13 @@ def compute_preprocessed_tensors(num_states: int,
                                  mean_count_t: torch.Tensor,
                                  cnlp_t: torch.Tensor,
                                  ncn_t: torch.Tensor,
-                                 device: str) -> SVGenotyperData:
+                                 device: str,
+                                 tensor_dtype: torch.dtype) -> SVGenotyperData:
     # Per-base depth
-    depth_t = mean_count_t.squeeze(-1).to(device=device)
+    depth_t = mean_count_t.squeeze(-1).to(device=device, dtype=tensor_dtype)
 
     # Copy state posterior probabilities
-    cn_prob_t = torch.exp(cnlp_t / (-10. * torch.log10(torch.tensor(np.exp(1.), device=device))))
+    cn_prob_t = torch.exp(cnlp_t / (-10. * torch.log10(torch.tensor(np.exp(1.))))).to(device=device, dtype=tensor_dtype)
 
     # Clamp values for numerical stability
     pe_t = pe_t.clamp(0, constants.MAX_PE_COUNT)
@@ -33,8 +34,8 @@ def compute_preprocessed_tensors(num_states: int,
         n = cn_prob_t.shape[0]  # Number of sites
         m = cn_prob_t.shape[1]  # Number of samples
         cn_prob_states = cn_prob_t.shape[2]  # Number of states from copy number model
-        filled_zeros = torch.zeros(n, m, cn_prob_states, device=device)  # All-zeros tensor
-        filled_index = torch.arange(cn_prob_states, device=device).repeat(n, m, 1)  # Last dimension is [0, 1, ..., num_states-1]
+        filled_zeros = torch.zeros(n, m, cn_prob_states, device=device, dtype=tensor_dtype)  # All-zeros tensor
+        filled_index = torch.arange(cn_prob_states, device=device, dtype=tensor_dtype).repeat(n, m, 1)  # Last dimension is [0, 1, ..., num_states-1]
 
         # CN model hom-ref probability where state is at least the local ploidy
         hom_ref_prob = torch.where(filled_index >= ncn_t.unsqueeze(-1), cn_prob_t, filled_zeros).sum(dim=-1).unsqueeze(-1)
@@ -50,8 +51,8 @@ def compute_preprocessed_tensors(num_states: int,
         n = cn_prob_t.shape[0]  # Number of sites
         m = cn_prob_t.shape[1]  # Number of samples
         cn_prob_states = cn_prob_t.shape[2]  # Number of states from copy number model
-        filled_zeros = torch.zeros(n, m, cn_prob_states, device=device)  # All-zeros tensor
-        filled_index = torch.arange(cn_prob_states, device=device).repeat(n, m, 1)  # Last dimension is [0, 1, ..., num_states-1]
+        filled_zeros = torch.zeros(n, m, cn_prob_states, device=device, dtype=tensor_dtype)  # All-zeros tensor
+        filled_index = torch.arange(cn_prob_states, device=device, dtype=tensor_dtype).repeat(n, m, 1)  # Last dimension is [0, 1, ..., num_states-1]
 
         # CN model hom-ref probability where state is at most the local ploidy
         hom_ref_prob = torch.where(filled_index <= ncn_t.unsqueeze(-1), cn_prob_t, filled_zeros).sum(dim=-1).unsqueeze(-1)
@@ -65,7 +66,7 @@ def compute_preprocessed_tensors(num_states: int,
         del filled_zeros, filled_index, probs_list
     else:
         # we only use CNLP values from the VCF for CNVs
-        rd_gt_prob_t = torch.ones((cn_prob_t.shape[0], cn_prob_t.shape[1], num_states), device=device) / float(num_states)
+        rd_gt_prob_t = torch.ones((cn_prob_t.shape[0], cn_prob_t.shape[1], num_states), device=device, dtype=tensor_dtype) / float(num_states)
 
     # Dilute and normalize
     rd_gt_prob_t += depth_dilution_factor

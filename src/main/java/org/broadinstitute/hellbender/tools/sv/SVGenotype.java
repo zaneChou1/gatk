@@ -90,9 +90,6 @@ public class SVGenotype extends TwoPassVariantWalker {
             doc = "Output VCF")
     private GATKPath outputVcf;
 
-    @Argument(fullName = "intermediates-dir", doc = "Intermediate file directory")
-    private GATKPath intermediatesDir;
-
     @Argument(fullName = "model-name", doc = "Model name")
     private String modelName;
 
@@ -177,27 +174,27 @@ public class SVGenotype extends TwoPassVariantWalker {
 
         // Execute Python code to initialize training
         logger.info("Sampling posterior distribution...");
+        final File tempDir = IOUtils.createTempDir(modelName + ".");
+        final File tempFile = new File(Paths.get(tempDir.getAbsolutePath(), modelName + ".genotypes.tsv").toString());
         pythonExecutor.sendSynchronousCommand("import svgenotyper" + NL);
-        pythonExecutor.sendSynchronousCommand("args = " + generatePythonArgumentsDictionary() + NL);
+        pythonExecutor.sendSynchronousCommand("args = " + generatePythonArgumentsDictionary(tempFile) + NL);
         final String runGenotypeCommand = "output, global_stats_by_type = svgenotyper.genotype.run(" +
                 "args=args, svtype_str='" + svType.name() + "')" + NL;
         pythonExecutor.sendSynchronousCommand(runGenotypeCommand);
         logger.info("Sampling completed!");
 
         logger.info("Reading output file...");
-        final Path intermediateFilePath = Paths.get(intermediatesDir.toString(), modelName + ".genotypes.tsv");
-        try (final BufferedReader file = new BufferedReader(IOUtils.makeReaderMaybeGzipped(intermediateFilePath))) {
+        try (final BufferedReader file = new BufferedReader(IOUtils.makeReaderMaybeGzipped(tempFile.toPath()))) {
             final String header = file.readLine();
             if (!header.startsWith("#")) {
-                throw new RuntimeException("Expected intermediate genotypes file header starting with #");
+                throw new RuntimeException("Expected Python output file header starting with #");
             }
             variantGenotypeDataMap = file.lines().map(line -> {
                 final VariantOutput variantOutput = VariantOutput.ParseVariantOutput(line, sampleList);
                 return new HashMap.SimpleImmutableEntry<>(variantOutput.id, variantOutput);
             }).collect(Collectors.toMap(HashMap.Entry::getKey, HashMap.Entry::getValue));
         } catch (final IOException e) {
-            throw new RuntimeException("Error reading from intermediate genotypes file: "
-                    + intermediateFilePath.toAbsolutePath().toString());
+            throw new RuntimeException("Error reading from Python output file in: " + tempFile.getAbsolutePath());
         }
         pythonExecutor.terminate();
 
@@ -401,9 +398,9 @@ public class SVGenotype extends TwoPassVariantWalker {
         return null;
     }
 
-    private String generatePythonArgumentsDictionary() {
+    private String generatePythonArgumentsDictionary(final File output) {
         final List<String> arguments = new ArrayList<>();
-        arguments.add("'output_dir': '" + intermediatesDir + "'");
+        arguments.add("'output': '" + output.getAbsolutePath() + "'");
         arguments.add("'model_name': '" + modelName + "'");
         arguments.add("'model_dir': '" + modelDir + "'");
         arguments.add("'device': '" + device + "'");

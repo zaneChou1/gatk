@@ -146,6 +146,15 @@ public final class SVCopyNumberPosteriors extends VariantWalker {
     )
     private boolean genotypeDepthCalls = false;
 
+    @Argument(
+            doc = "Depth-only call min included intervals overlap",
+            fullName = SVCluster.DEPTH_ONLY_INCLUDE_INTERVAL_OVERLAP_LONG_NAME,
+            minValue = 0,
+            maxValue = 1,
+            optional = true
+    )
+    private double minDepthOnlyIncludeOverlap = 0.5;
+
     public static final int COPY_NEUTRAL_PRIOR_BASIS_LENGTH = 1000;
     public static final String COPY_NUMBER_LOG_POSTERIORS_KEY = "CNLP";
     public static final String NEUTRAL_COPY_NUMBER_KEY = "NCN";
@@ -280,7 +289,7 @@ public final class SVCopyNumberPosteriors extends VariantWalker {
 
     public void apply(VariantContext variant, ReadsContext readsContext, ReferenceContext referenceContext, FeatureContext featureContext) {
         final SVCallRecord call = SVCallRecordWithEvidence.create(variant);
-        if (!SVCluster.isValidSize(call, minEventSize) || !SVCluster.isWhitelisted(call, whitelistedIntervalTreeMap)) return;
+        if (!SVCluster.isValidSize(call, minEventSize) || !SVCluster.isWhitelisted(call, whitelistedIntervalTreeMap, minDepthOnlyIncludeOverlap)) return;
 
         final String contig = variant.getContig();
         if (contig != currentContig) {

@@ -11,7 +11,9 @@ from .model import SVGenotyperPyroModel
 from . import io
 
 
-def run(args, svtype_str: str):
+def run(args,
+        svtype_str: str,
+        default_dtype: torch.dtype = torch.float32):
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)-8s %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
@@ -29,14 +31,14 @@ def run(args, svtype_str: str):
     if params is None:
         raise RuntimeError("Model at not found: {:s}".format(base_path))
 
-    model = SVGenotyperPyroModel(svtype=svtype, k=params['k'], mu_eps_pe=params['mu_eps_pe'], mu_eps_sr1=params['mu_eps_sr1'],
+    model = SVGenotyperPyroModel(svtype=svtype, k=params['k'], tensor_dtype=default_dtype, mu_eps_pe=params['mu_eps_pe'], mu_eps_sr1=params['mu_eps_sr1'],
                                  mu_eps_sr2=params['mu_eps_sr2'], mu_lambda_pe=params['mu_lambda_pe'], mu_lambda_sr1=params['mu_lambda_sr1'],
                                  mu_lambda_sr2=params['mu_lambda_sr2'], var_phi_pe=params['var_phi_pe'], var_phi_sr1=params['var_phi_sr1'],
                                  var_phi_sr2=params['var_phi_sr2'], mu_eta_q=params['mu_eta_q'], mu_eta_r=params['mu_eta_r'],
                                  device=args['device'], loss=params['loss'])
     load_param_store(base_path, device=args['device'])
     vids_list = io.load_list(base_path + ".vids.list")
-    data = io.load_tensors(base_path=base_path, svtype=svtype, device=args['device'])
+    data = io.load_tensors(base_path=base_path, svtype=svtype, tensor_dtype=default_dtype, device=args['device'])
 
     predictive_samples = model.run_predictive(data=data, n_samples=args['genotype_predictive_samples'])
     discrete_samples = model.run_discrete(data=data, svtype=svtype, log_freq=args['genotype_discrete_log_freq'], n_samples=args['genotype_discrete_samples'])
@@ -48,8 +50,7 @@ def run(args, svtype_str: str):
     output = get_output(vids_list=vids_list, freq_z=freq['z'], stats=stats, params=params)
     global_stats = get_global_stats(stats=stats, model=model)
 
-    output_path = base_path + ".genotypes.tsv"
-    io.write_variant_output(output_path=output_path, output_data=output)
+    io.write_variant_output(output_path=args['output'], output_data=output)
 
     return output, global_stats
 
