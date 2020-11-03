@@ -304,13 +304,17 @@ public class SVGenotype extends TwoPassVariantWalker {
                 for (int i = 0; i < numAltAlleles; i++) {
                     genotypeAlleles.add(altAllele);
                 }
-                while (genotypeAlleles.size() < Math.max(1, samplePloidy)) {
+                // Can't have mixed rows with some samples missing genotypes
+                final int numAlleles = Math.max(1, samplePloidy);
+                while (genotypeAlleles.size() < numAlleles) {
                     genotypeAlleles.add(refAllele);
                 }
                 copyNumber = numRefAlleles;
             } else if (svType.equals(StructuralVariantType.DUP)) {
-                genotypeAlleles = new ArrayList<>(samplePloidy);
-                for (int i = 0; i < samplePloidy; i++) {
+                // Can't have mixed rows with some samples missing genotypes
+                final int numAlleles = Math.max(samplePloidy, 1);
+                genotypeAlleles = new ArrayList<>(numAlleles);
+                for (int i = 0; i < numAlleles; i++) {
                     genotypeAlleles.add(Allele.NO_CALL);
                 }
                 copyNumber = samplePloidy + minPLIndex;

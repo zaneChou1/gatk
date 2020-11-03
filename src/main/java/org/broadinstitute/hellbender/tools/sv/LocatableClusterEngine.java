@@ -5,7 +5,6 @@ import htsjdk.samtools.util.Locatable;
 import org.broadinstitute.hellbender.utils.IntervalUtils;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.Utils;
-import org.broadinstitute.hellbender.utils.codecs.SVCallRecordCodec;
 import scala.Tuple2;
 
 import java.util.*;
@@ -64,11 +63,6 @@ public abstract class LocatableClusterEngine<T extends Locatable> {
     private int count = 0;
 
     public void add(final T item) {
-
-        if (count % 100 == 0 || currentClusters.size() <= 1) {
-            System.out.println(currentClusters.size() + " - " + new SVCallRecordCodec().encode((SVCallRecord) item));
-        }
-        count++;
 
         // Start a new cluster if on a new contig
         if (!item.getContig().equals(currentContig)) {

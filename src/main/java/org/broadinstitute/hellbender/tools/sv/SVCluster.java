@@ -84,19 +84,19 @@ public final class SVCluster extends GATKTool {
             doc = "Split reads file",
             fullName = SPLIT_READ_LONG_NAME
     )
-    private String splitReadsFile;
+    private GATKPath splitReadsFile;
 
     @Argument(
             doc = "Discordant pairs file",
             fullName = DISCORDANT_PAIRS_LONG_NAME
     )
-    private String discordantPairsFile;
+    private GATKPath discordantPairsFile;
 
     @Argument(
             doc = "Sample coverage tsv",
             fullName = SAMPLE_COVERAGE_LONG_NAME
     )
-    private String sampleCoverageFile;
+    private GATKPath sampleCoverageFile;
 
     @Argument(
             doc = "Input SV calls tsv file (compression supported)",
@@ -199,7 +199,7 @@ public final class SVCluster extends GATKTool {
 
     private void initializeReader() {
         reader = new FeatureDataSource<>(
-                inputFile.toPath().toString(),
+                inputFile.toString(),
                 "inputFile",
                 INPUT_QUERY_LOOKAHEAD,
                 SVCallRecord.class,
@@ -210,7 +210,7 @@ public final class SVCluster extends GATKTool {
 
     private void initializeSplitReadEvidenceDataSource() {
         splitReadSource = new FeatureDataSource<>(
-                splitReadsFile,
+                splitReadsFile.toString(),
                 "splitReadsFile",
                 SPLIT_READ_QUERY_LOOKAHEAD,
                 SplitReadEvidence.class,
@@ -220,7 +220,7 @@ public final class SVCluster extends GATKTool {
 
     private void initializeDiscordantPairDataSource() {
         discordantPairSource = new FeatureDataSource<>(
-                discordantPairsFile,
+                discordantPairsFile.toString(),
                 "discordantPairsFile",
                 DISCORDANT_PAIR_QUERY_LOOKAHEAD,
                 DiscordantPairEvidence.class,
@@ -229,15 +229,16 @@ public final class SVCluster extends GATKTool {
     }
 
     private void loadSampleCoverage() {
+        final String fileString = sampleCoverageFile.toString();
         try {
-            sampleCoverageMap = IOUtils.readLines(BucketUtils.openFile(sampleCoverageFile), Charset.defaultCharset()).stream()
+            sampleCoverageMap = IOUtils.readLines(BucketUtils.openFile(fileString), Charset.defaultCharset()).stream()
                     .map(line -> line.split("\t"))
                     .collect(Collectors.toMap(tokens -> tokens[0], tokens -> Double.valueOf(tokens[1])));
-            samplesList = IOUtils.readLines(BucketUtils.openFile(sampleCoverageFile), Charset.defaultCharset()).stream()
+            samplesList = IOUtils.readLines(BucketUtils.openFile(fileString), Charset.defaultCharset()).stream()
                     .map(line -> line.split("\t")[0])
                     .collect(Collectors.toList());
         } catch (final IOException e) {
-            throw new UserException.CouldNotReadInputFile(sampleCoverageFile, e);
+            throw new UserException.CouldNotReadInputFile(fileString, e);
         }
     }
 
