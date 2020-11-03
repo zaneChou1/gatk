@@ -5,8 +5,7 @@ import htsjdk.samtools.util.IOUtil;
 import htsjdk.tribble.Tribble;
 import htsjdk.tribble.index.Index;
 import htsjdk.tribble.index.IndexFactory;
-import htsjdk.variant.variantcontext.StructuralVariantType;
-import htsjdk.variant.variantcontext.VariantContext;
+import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.VCFHeader;
 import htsjdk.variant.vcf.VCFHeaderLine;
 import org.broadinstitute.barclay.argparser.Argument;
@@ -34,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -108,7 +108,7 @@ public final class MergeSVCalls extends GATKTool {
     private List<String> cnmopsFiles;
 
     @Argument(
-            doc = "Output file ending in \"" + SVCallRecordCodec.FORMAT_SUFFIX + "\" or \"" + SVCallRecordCodec.COMPRESSED_FORMAT_SUFFIX + "\"",
+            doc = "Output file ending in \"" + SVCallRecordCodec.FORMAT_SUFFIX + "\"",
             fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
             shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME
     )
@@ -209,7 +209,12 @@ public final class MergeSVCalls extends GATKTool {
         final boolean startStrand = isDel;
         final boolean endStrand = !isDel;
         final List<String> algorithms = Collections.singletonList(SVCluster.DEPTH_ALGORITHM);
-        return new SVCallRecord(contig, start, startStrand, contig, end, endStrand, type, length, algorithms, samples);
+        final List<Genotype> genotypes = samples.stream().map(MergeSVCalls::buildEmptyGenotype).collect(Collectors.toList());
+        return new SVCallRecord(contig, start, startStrand, contig, end, endStrand, type, length, algorithms, genotypes);
+    }
+
+    private static Genotype buildEmptyGenotype(final String sample) {
+        return new GenotypeBuilder(sample).make();
     }
 
     private void processVariantFile(final String file, final int index) {

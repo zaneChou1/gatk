@@ -353,10 +353,10 @@ public final class SVCluster extends GATKTool {
         }
         final SVCallRecordWithEvidence positiveBreakend = new SVCallRecordWithEvidence(call.getContig(), call.getStart(), true,
                 call.getEndContig(), call.getEnd(), true, StructuralVariantType.BND, -1, call.getAlgorithms(),
-                call.getSamples(), call.getStartSplitReadSites(), call.getEndSplitReadSites(), call.getDiscordantPairs());
+                call.getGenotypes(), call.getStartSplitReadSites(), call.getEndSplitReadSites(), call.getDiscordantPairs());
         final SVCallRecordWithEvidence negativeBreakend = new SVCallRecordWithEvidence(call.getContig(), call.getStart(), false,
                 call.getEndContig(), call.getEnd(), false, StructuralVariantType.BND, -1, call.getAlgorithms(),
-                call.getSamples(), call.getStartSplitReadSites(), call.getEndSplitReadSites(), call.getDiscordantPairs());
+                call.getGenotypes(), call.getStartSplitReadSites(), call.getEndSplitReadSites(), call.getDiscordantPairs());
         return Stream.of(positiveBreakend, negativeBreakend);
     }
 
