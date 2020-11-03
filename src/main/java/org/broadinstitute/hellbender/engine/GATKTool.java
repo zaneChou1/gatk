@@ -923,15 +923,14 @@ public abstract class GATKTool extends CommandLineProgram {
      */
     private static Path removeVcfExtension(final Path path) {
         Utils.nonNull(path);
-        final Path baseDir = path.subpath(0, path.getNameCount() - 1);
-        final String fileName = path.getFileName().toString();
-        String extension = "";
+        String newPath = path.toAbsolutePath().toString();
         for (final String testExtension : FileExtensions.VCF_LIST) {
-            if (fileName.endsWith(testExtension)) {
-                extension = testExtension;
+            if (newPath.endsWith(testExtension)) {
+                newPath = newPath.substring(0, newPath.length() - testExtension.length());
+                break;
             }
         }
-        return Paths.get(baseDir.toString(), fileName.substring(0, fileName.length() - extension.length()));
+        return Paths.get(newPath);
     }
 
     /**
