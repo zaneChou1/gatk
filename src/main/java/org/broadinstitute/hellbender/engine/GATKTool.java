@@ -4,6 +4,7 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMProgramRecord;
 import htsjdk.samtools.SAMSequenceDictionary;
 import htsjdk.samtools.SamReaderFactory;
+import htsjdk.samtools.util.FileExtensions;
 import htsjdk.samtools.util.Locatable;
 import htsjdk.tribble.Feature;
 import htsjdk.variant.variantcontext.writer.Options;
@@ -41,6 +42,7 @@ import org.broadinstitute.hellbender.utils.variant.writers.ShardingVCFWriter;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Stream;
@@ -906,11 +908,30 @@ public abstract class GATKTool extends CommandLineProgram {
                     options.toArray(new Options[options.size()]));
         }
         return new ShardingVCFWriter(
-                outPath,
+                removeVcfExtension(outPath),
                 maxVariantsPerShard,
                 sequenceDictionary,
                 createOutputVariantMD5,
                 options.toArray(new Options[options.size()]));
+    }
+
+    /**
+     * Strips VCF extension from the given path, if it has one.
+     *
+     * @param path Path to modify. May not be null.
+     * @return Input path without a VCF extension
+     */
+    private static Path removeVcfExtension(final Path path) {
+        Utils.nonNull(path);
+        final Path baseDir = path.subpath(0, path.getNameCount() - 1);
+        final String fileName = path.getFileName().toString();
+        String extension = "";
+        for (final String testExtension : FileExtensions.VCF_LIST) {
+            if (fileName.endsWith(testExtension)) {
+                extension = testExtension;
+            }
+        }
+        return Paths.get(baseDir.toString(), fileName.substring(0, fileName.length() - extension.length()));
     }
 
     /**

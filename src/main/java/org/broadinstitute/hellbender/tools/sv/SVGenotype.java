@@ -250,7 +250,6 @@ public class SVGenotype extends TwoPassVariantWalker {
         final Allele refAllele = Allele.REF_N;
         final Allele altAllele = Allele.create("<" + svType.name() + ">", false);
 
-        final int numGenotypes = modelData.getNumGenotypes();
         final int numSamples = sampleList.size();
         final int[] samplePloidies = new int[numSamples];
         for (int i = 0; i < numSamples; i++) {
@@ -265,19 +264,16 @@ public class SVGenotype extends TwoPassVariantWalker {
             final GenotypeBuilder genotypeBuilder = new GenotypeBuilder(genotype);
 
             final double[] freq = modelData.getSampleFrequencies(sampleIndex);
-            final int[] genotypePhredProbs = new int[numGenotypes];
-            for (int i = 0; i < numGenotypes; i++) {
-                if (i <= samplePloidy || svType.equals(StructuralVariantType.DUP) || svType.equals(StructuralVariantType.BND)) {
-                    genotypePhredProbs[i] = getGenotypePhredScore(freq[i]);
-                } else {
-                    throw new UserException.BadInput("Genotype state " + i + " not supported for SVTYPE " + svType.name()
-                            + " when the sample ploidy is " + samplePloidy);
-                }
+            final int numStates = freq.length;
+            final int[] genotypePhredProbs = new int[numStates];
+
+            for (int i = 0; i < numStates; i++) {
+                genotypePhredProbs[i] = getGenotypePhredScore(freq[i]);
             }
             genotypeBuilder.PL(genotypePhredProbs);
 
             double minPL = MAX_GENOTYPE_PL;
-            int minPLIndex = -1;
+            int minPLIndex = 0;
             for (int i = 0; i < genotypePhredProbs.length; i++) {
                 if (genotypePhredProbs[i] <= minPL) {
                     minPL = genotypePhredProbs[i];
@@ -303,13 +299,13 @@ public class SVGenotype extends TwoPassVariantWalker {
                     || svType.equals(StructuralVariantType.INS)
                     || svType.equals(StructuralVariantType.BND)) {
                 final int numRefAlleles = samplePloidy - minPLIndex;
-                final int numAltAlleles = minPLIndex;
+                final int numAltAlleles = Math.min(minPLIndex, samplePloidy);
                 genotypeAlleles = new ArrayList<>(samplePloidy);
-                for (int i = 0; i < numRefAlleles; i++) {
-                    genotypeAlleles.add(refAllele);
-                }
                 for (int i = 0; i < numAltAlleles; i++) {
                     genotypeAlleles.add(altAllele);
+                }
+                while (genotypeAlleles.size() < Math.max(1, samplePloidy)) {
+                    genotypeAlleles.add(refAllele);
                 }
                 copyNumber = numRefAlleles;
             } else if (svType.equals(StructuralVariantType.DUP)) {
@@ -322,7 +318,9 @@ public class SVGenotype extends TwoPassVariantWalker {
                 throw new UserException.BadInput("Unsupported SVTYPE: " + svType);
             }
             genotypeBuilder.alleles(genotypeAlleles);
-            genotypeBuilder.attribute(COPY_NUMBER_FIELD, copyNumber);
+            if (svType.equals(StructuralVariantType.DEL) || svType.equals(StructuralVariantType.DUP)) {
+                genotypeBuilder.attribute(COPY_NUMBER_FIELD, copyNumber);
+            }
             newGenotypes.add(genotypeBuilder.make());
         }
         builder.genotypes(newGenotypes);

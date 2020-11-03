@@ -31,7 +31,6 @@ dependencies:
 - defaults::intel-openmp=2019.4
 - conda-forge::matplotlib=3.2.1
 - conda-forge::pandas=1.0.3
-- cudatoolkit=10.2
 - pytorch::pytorch=1.6.0
 
 # core R dependencies; these should only be used for plotting and do not take precedence over core python dependencies!
