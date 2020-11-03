@@ -209,12 +209,15 @@ public final class MergeSVCalls extends GATKTool {
         final boolean startStrand = isDel;
         final boolean endStrand = !isDel;
         final List<String> algorithms = Collections.singletonList(SVCluster.DEPTH_ALGORITHM);
-        final List<Genotype> genotypes = samples.stream().map(MergeSVCalls::buildEmptyGenotype).collect(Collectors.toList());
+        // Make genotypes het to play nicely with the defragmenter
+        final List<Genotype> genotypes = samples.stream().map(MergeSVCalls::buildHetGenotype).collect(Collectors.toList());
         return new SVCallRecord(contig, start, startStrand, contig, end, endStrand, type, length, algorithms, genotypes);
     }
 
-    private static Genotype buildEmptyGenotype(final String sample) {
-        return new GenotypeBuilder(sample).make();
+    private static Genotype buildHetGenotype(final String sample) {
+        final GenotypeBuilder builder = new GenotypeBuilder(sample);
+        builder.alleles(Collections.singletonList(Allele.NON_REF_ALLELE));
+        return builder.make();
     }
 
     private void processVariantFile(final String file, final int index) {

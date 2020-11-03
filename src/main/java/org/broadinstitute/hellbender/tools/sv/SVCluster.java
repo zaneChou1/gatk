@@ -158,6 +158,10 @@ public final class SVCluster extends GATKTool {
     public static String START_SPLIT_READ_COUNT_ATTRIBUTE = "SR1";
     public static String END_SPLIT_READ_COUNT_ATTRIBUTE = "SR2";
     public static String DISCORDANT_PAIR_COUNT_ATTRIBUTE = "PE";
+    public static String RAW_CALL_ATTRIBUTE = "RC";
+
+    public static int RAW_CALL_ATTRIBUTE_TRUE = 1;
+    public static int RAW_CALL_ATTRIBUTE_FALSE = 0;
 
     public static String DEPTH_ALGORITHM = "depth";
 
@@ -305,10 +309,10 @@ public final class SVCluster extends GATKTool {
         header.addMetaDataLine(new VCFInfoHeaderLine(SVTYPE_ATTRIBUTE, 1, VCFHeaderLineType.String, "Variant type"));
         header.addMetaDataLine(new VCFInfoHeaderLine(STRANDS_ATTRIBUTE, 1, VCFHeaderLineType.String, "Start and end strands"));
         header.addMetaDataLine(new VCFInfoHeaderLine(ALGORITHMS_ATTRIBUTE, 1, VCFHeaderLineType.String, "List of calling algorithms"));
-        header.addMetaDataLine(new VCFFormatHeaderLine(VCFConstants.GENOTYPE_KEY, 1, VCFHeaderLineType.String, "Genotype"));
         header.addMetaDataLine(new VCFFormatHeaderLine(START_SPLIT_READ_COUNT_ATTRIBUTE, 1, VCFHeaderLineType.Integer, "Split read count at start of variant"));
         header.addMetaDataLine(new VCFFormatHeaderLine(END_SPLIT_READ_COUNT_ATTRIBUTE, 1, VCFHeaderLineType.Integer, "Split read count at end of variant"));
         header.addMetaDataLine(new VCFFormatHeaderLine(DISCORDANT_PAIR_COUNT_ATTRIBUTE, 1, VCFHeaderLineType.Integer, "Discordant pair count"));
+        header.addMetaDataLine(new VCFFormatHeaderLine(RAW_CALL_ATTRIBUTE, 1, VCFHeaderLineType.Integer, "Sample non-reference in raw calls"));
         writer.writeHeader(header);
     }
 
@@ -335,9 +339,9 @@ public final class SVCluster extends GATKTool {
             genotypeBuilder.attribute(END_SPLIT_READ_COUNT_ATTRIBUTE, endSplitReadCounts.getOrDefault(sample, 0));
             genotypeBuilder.attribute(DISCORDANT_PAIR_COUNT_ATTRIBUTE, discordantPairCounts.getOrDefault(sample, 0));
             if (call.getSamples().contains(sample)) {
-                genotypeBuilder.alleles(Lists.newArrayList(refAllele, altAllele));
+                genotypeBuilder.attribute(RAW_CALL_ATTRIBUTE, RAW_CALL_ATTRIBUTE_TRUE);
             } else {
-                genotypeBuilder.alleles(Lists.newArrayList(refAllele, refAllele));
+                genotypeBuilder.attribute(RAW_CALL_ATTRIBUTE, RAW_CALL_ATTRIBUTE_FALSE);
             }
             genotypes.add(genotypeBuilder.make());
         }

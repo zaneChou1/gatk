@@ -82,20 +82,26 @@ public class SVDepthOnlyCallDefragmenter extends LocatableClusterEngine<SVCallRe
      * @return
      */
     private Genotype defragmentGenotypes(final List<Genotype> genotypesForSameSample) {
+        Utils.nonEmpty(genotypesForSameSample);
         final String sampleName = genotypesForSameSample.get(0).getSampleName();
         if (!genotypesForSameSample.stream().allMatch(g -> g.getSampleName().equals(sampleName))) {
             throw new IllegalArgumentException("This method expects a list of genotypes from the same sample, " +
                     "but not all input genotypes represent sample " + sampleName + ".");
         }
+        final Set<Integer> copyNumbers = genotypesForSameSample.stream()
+                .filter(g -> g.hasExtendedAttribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT))
+                .map(g -> Integer.parseInt(g.getExtendedAttribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT).toString()))
+                .collect(Collectors.toSet());
         final GenotypeBuilder gb = new GenotypeBuilder(genotypesForSameSample.get(0));
-        //For now just make sure genotypes have the same copy number -- qualities will be recalculated elsewhere
-        gb.noAttributes();
-        final int copyNumber = Integer.parseInt(genotypesForSameSample.get(0).getExtendedAttribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT).toString());
-        if (genotypesForSameSample.stream().allMatch(g -> Integer.parseInt(g.getExtendedAttribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT).toString()) == copyNumber)) {
-            gb.attribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT, copyNumber);
+        if (copyNumbers.isEmpty()) {
+            return gb.make();
+        } else if (copyNumbers.size() == 1) {
+            //For now just make sure genotypes have the same copy number -- qualities will be recalculated elsewhere
+            gb.noAttributes();
+            gb.attribute(GATKSVVCFConstants.COPY_NUMBER_FORMAT, copyNumbers.iterator().next());
             return gb.make();
         } else {
-            throw new IllegalArgumentException("This method will only merge genotypes with the same copy number. Expected all genotypes to be copy number " + copyNumber + ".");
+            throw new IllegalArgumentException("This method will only merge genotypes with the same copy number. Found " + copyNumbers.size() + " different copy numbers.");
         }
     }
 
