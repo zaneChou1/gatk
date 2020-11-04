@@ -18,6 +18,7 @@ public class SVCallRecordCodec extends AsciiFeatureCodec<SVCallRecord> {
     public static final String COL_DELIMITER = "\t";
     public static String STRAND_PLUS = "+";
     public static String STRAND_MINUS = "-";
+    public static final TabixFormat SV_CALL_RECORD_FORMAT = new TabixFormat(TabixFormat.ZERO_BASED, 1, 2, 0, '#', 0);
     private static final Splitter splitter = Splitter.on(COL_DELIMITER);
 
     public SVCallRecordCodec() {
@@ -46,9 +47,7 @@ public class SVCallRecordCodec extends AsciiFeatureCodec<SVCallRecord> {
     }
 
     @Override
-    public TabixFormat getTabixFormat() {
-        return TabixFormat.BED;
-    }
+    public TabixFormat getTabixFormat() { return SV_CALL_RECORD_FORMAT; }
 
     @Override
     public boolean canDecode(final String path) {
