@@ -115,7 +115,7 @@ public class AS_QualByDepth extends InfoFieldAnnotation implements ReducibleAnno
      *
      * @param vc -- contains the final set of alleles, possibly subset by GenotypeGVCFs
      * @param originalVC -- used to get all the alleles for all gVCFs
-     * @return
+     * @return may be null
      */
     @Override
     public Map<String, Object> finalizeRawData(VariantContext vc, VariantContext originalVC) {
@@ -124,13 +124,12 @@ public class AS_QualByDepth extends InfoFieldAnnotation implements ReducibleAnno
             return null;
         }
 
-        final GenotypesContext genotypes = vc.getGenotypes();
-
         final List<Integer> standardDepth;
         if (originalVC.hasAttribute(GATKVCFConstants.AS_VARIANT_DEPTH_KEY)) {
-            standardDepth = Arrays.stream(originalVC.getAttributeAsString(GATKVCFConstants.AS_VARIANT_DEPTH_KEY, "")
-                    .split(AnnotationUtils.ALLELE_SPECIFIC_SPLIT_REGEX)).mapToInt(s -> s.isEmpty() ? 0 : Integer.parseInt(s)).boxed().collect(Collectors.toList());
+            standardDepth = Arrays.stream(originalVC.getAttributeAsString(GATKVCFConstants.AS_VARIANT_DEPTH_KEY, "0")
+                    .split(AnnotationUtils.ALLELE_SPECIFIC_SPLIT_REGEX)).mapToInt(val -> val.length() == 0 ? 0 : Integer.parseInt(val)).boxed().collect(Collectors.toList());
         } else {
+            final GenotypesContext genotypes = vc.getGenotypes();
             if ( genotypes == null || genotypes.isEmpty() ) {
                 return null;
             }
@@ -155,10 +154,8 @@ public class AS_QualByDepth extends InfoFieldAnnotation implements ReducibleAnno
 
         final Map<String, Object> map = new HashMap<>();
         map.put(getKeyNames().get(0), AnnotationUtils.encodeValueList(QDlist, "%.2f"));
-        /*if (vc.hasAttribute(GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY)) {
-            //keep AS_QUALapprox for Gnarly Pipeline because we don't subset alts or output genotypes if there are more than 6 alts
-            map.put(GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY, StringUtils.join(alleleQualList, AnnotationUtils.ALLELE_SPECIFIC_REDUCED_DELIM));
-        }*/
+        //keep AS_QUALapprox for Gnarly Pipeline because we don't subset alts or output genotypes if there are more than 6 alts
+        map.put(GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY, StringUtils.join(alleleQualList, AnnotationUtils.LIST_DELIMITER));
         return map;
     }
 

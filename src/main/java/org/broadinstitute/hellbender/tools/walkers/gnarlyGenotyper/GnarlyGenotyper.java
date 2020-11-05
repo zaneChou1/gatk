@@ -281,9 +281,9 @@ public final class GnarlyGenotyper extends VariantWalker {
         }
 
         //return early if variant can't be genotyped
-        if (!variant.hasAttribute(GATKVCFConstants.RAW_QUAL_APPROX_KEY)) {
-            warning.warn("At least one variant cannot be genotyped because it is missing the " + GATKVCFConstants.RAW_QUAL_APPROX_KEY +
-                    "key assigned by the ReblockGVCFs tool. GnarlyGenotyper output may be empty.");
+        if (!(variant.hasAttribute(GATKVCFConstants.RAW_QUAL_APPROX_KEY) || variant.hasAttribute(GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY))) {
+            warning.warn("At least one variant cannot be genotyped. Variants require the " + GATKVCFConstants.RAW_QUAL_APPROX_KEY +
+                    " or " + GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY + " keys assigned by the ReblockGVCFs tool. GnarlyGenotyper output may be empty.");
             return;
         }
 

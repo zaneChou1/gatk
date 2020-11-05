@@ -1,6 +1,7 @@
 package org.broadinstitute.hellbender.tools.walkers.gnarlyGenotyper;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import htsjdk.variant.variantcontext.*;
 import htsjdk.variant.vcf.*;
@@ -107,7 +108,17 @@ public final class GnarlyGenotyperEngine {
         final VariantContextBuilder vcfBuilder = new VariantContextBuilder(vcWithMQ);
 
         boolean siteFailsQual = false;
-        final double QUALapprox = variant.getAttributeAsInt(GATKVCFConstants.RAW_QUAL_APPROX_KEY, 0);
+        final double QUALapprox;
+        if (variant.hasAttribute(GATKVCFConstants.RAW_QUAL_APPROX_KEY)) {
+            QUALapprox = variant.getAttributeAsInt(GATKVCFConstants.RAW_QUAL_APPROX_KEY, 0);
+        }
+        else if (variant.hasAttribute(GATKVCFConstants.AS_RAW_QUAL_APPROX_KEY)) {
+            List<Integer> alleleSpecificQualList = AS_QualByDepth.parseQualList(variant);
+            QUALapprox = Collections.max(alleleSpecificQualList);
+        }
+        else {
+            QUALapprox = 0;
+        }
         //Don't apply the indel prior to mixed sites if there's a SNP
         final boolean hasSnpAllele = variant.getAlternateAlleles().stream().anyMatch(allele -> allele.length() == variant.getReference().length());
         final boolean isIndel = !hasSnpAllele;
@@ -239,14 +250,12 @@ public final class GnarlyGenotyperEngine {
 
         vcfBuilder.attribute(GATKVCFConstants.FISHER_STRAND_KEY, FisherStrand.makeValueObjectForAnnotation(FisherStrand.pValueForContingencyTable(StrandBiasTest.decodeSBBS(SBsum))));
         vcfBuilder.attribute(GATKVCFConstants.STRAND_ODDS_RATIO_KEY, StrandOddsRatio.formattedValue(StrandOddsRatio.calculateSOR(StrandBiasTest.decodeSBBS(SBsum))));
+        vcfBuilder.alleles(targetAlleles);
         vcfBuilder.genotypes(calledGenotypes);
 
         if (annotationDBBuilder != null) {
             annotationDBBuilder.attribute(GATKVCFConstants.SB_TABLE_KEY, SBsum);
             annotationDBBuilder.noGenotypes();
-        }
-
-        if (annotationDBBuilder != null) {
             annotationDBBuilder.alleles(targetAlleles);
         }
         vcfBuilder.alleles(targetAlleles);
@@ -309,7 +318,6 @@ public final class GnarlyGenotyperEngine {
                 vcfBuilder.rmAttribute(GATKVCFConstants.AS_VARIANT_DEPTH_KEY);
             }
         }
-
 
         //instead of annotationDBBuilder.make(), we modify the builder passed in (if non-null)
         if (!siteFailsQual) {
@@ -392,7 +400,15 @@ public final class GnarlyGenotyperEngine {
             mergedGenotypes.add(calledGT);
 
             if (g.hasAnyAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY)) {
-                MathUtils.addToArrayInPlace(SBsum, getSBFieldAsIntArray(g));
+                try {
+                    @SuppressWarnings("unchecked")
+                    final List<Integer> sbbsList = (ArrayList<Integer>) g.getAnyAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY);
+                    MathUtils.addToArrayInPlace(SBsum, Ints.toArray(sbbsList));
+                }
+                catch (final ClassCastException e) {
+                    throw new IllegalStateException("The GnarlyGenotyper tool assumes that input variants have SB FORMAT " +
+                            "fields that have already been parsed into ArrayLists.");
+                }
             }
 
             //running total for AC values
@@ -637,35 +653,5 @@ public final class GnarlyGenotyperEngine {
         }
         return calledAllelePLPositions.stream().distinct().collect(Collectors.toList());
 
-    }
-
-  /**
-   * Parse SB field into an array of ints to pass to MathUtils. This method is required as we cannot always expect the
-   * variant context to be fully decoded.
-   * @param g genotype for a sample
-   * @return int array for the given genotype
-   */
-  private static int[] getSBFieldAsIntArray(Genotype g) {
-      Object sbbsObj = g.getAnyAttribute(GATKVCFConstants.STRAND_BIAS_BY_SAMPLE_KEY);
-      if (sbbsObj == null) {
-          return new int[0];
-      } else if (sbbsObj instanceof String) {
-          final String[] sbbsStr = ((String)sbbsObj).split(",");
-          try {
-              return Arrays.stream(sbbsStr).map(String::trim).mapToInt(Integer::parseInt).toArray();
-          } catch (final Exception ex) {
-              throw new IllegalStateException("The GnarlyGenotyper tool assumes that input variants have SB FORMAT "
-                      + " fields as a list of integers separated by commas.", ex);
-          }
-      } else {
-          try {
-              @SuppressWarnings("unchecked")
-              final List<Integer> sbbsList = (ArrayList<Integer>) sbbsObj;
-              return Ints.toArray(sbbsList);
-          } catch (final ClassCastException e) {
-              throw new IllegalStateException("The GnarlyGenotyper tool assumes that input variants have SB FORMAT " +
-                      "fields parsed into ArrayLists.");
-          }
-      }
     }
 }
