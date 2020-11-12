@@ -99,10 +99,6 @@ public final class HaplotypeCallerSpark extends AssemblyRegionWalkerSpark {
 
     @Override
     protected void runTool(JavaSparkContext ctx) {
-        //TODO remove me when https://github.com/broadinstitute/gatk/issues/4303 are fixed
-        if (output.endsWith(FileExtensions.BCF) || output.endsWith(FileExtensions.BCF + ".gz")) {
-            throw new UserException.UnimplementedFeature("It is currently not possible to write a BCF file on spark.  See https://github.com/broadinstitute/gatk/issues/4303 for more details .");
-        }
         Utils.validateArg(hcArgs.dbsnp.dbsnp == null, "HaplotypeCallerSpark does not yet support -D or --dbsnp arguments" );
         Utils.validateArg(hcArgs.comps.isEmpty(), "HaplotypeCallerSpark does not yet support -comp or --comp arguments" );
         Utils.validateArg(hcArgs.bamOutputPath == null, "HaplotypeCallerSpark does not yet support -bamout or --bamOutput");
